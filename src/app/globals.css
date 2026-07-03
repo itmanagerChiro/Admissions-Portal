@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+@theme {
+  /* NZCC Brand Colours */
+  --color-green: #114E3B;
+  --color-green-dark: #0d3d2e;
+  --color-green-secondary: #2E6B57;
+  --color-green-light: #e8f0ed;
+  --color-gold: #C79A3B;
+  --color-gold-light: #e8c97a;
+  --color-gold-subtle: #faf4e8;
+  --color-surface: #F2F2F0;
+  --color-surface-dark: #E8E8E5;
+  --color-border: #E5E7EB;
+  --color-text: #333333;
+  --color-text-muted: #666666;
+  --color-text-light: #999999;
+  --color-red-flag: #c0392b;
+  --color-red-flag-light: #e74c3c;
+
+  /* Legacy aliases so existing code doesn't break */
+  --color-cream: #F2F2F0;
+  --color-cream-dark: #E8E8E5;
+  --color-olive: #114E3B;
+  --color-olive-dark: #0d3d2e;
+  --color-olive-light: #2E6B57;
+  --color-muted: #666666;
+  --color-muted-light: #999999;
+
+  /* Fonts */
+  --font-serif: var(--font-montserrat), var(--font-inter), system-ui, sans-serif;
+  --font-sans: var(--font-opensans), var(--font-inter), system-ui, sans-serif;
+}
+
+:root {
+  --background: #F2F2F0;
+  --foreground: #333333;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  color: #333333;
+}
+
+/* Table / list row hover accent — shared pattern */
+.applicant-row:hover,
+.compliance-row:hover,
+.staff-row:hover,
+.task-row:hover,
+.message-row:hover {
+  background-color: rgba(17, 78, 59, 0.025);
+}
+.applicant-row:hover .applicant-accent-cell,
+.compliance-row:hover .compliance-accent-cell {
+  border-left-color: #114E3B !important;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #C8C8C0;
+  border-radius: 3px;
+}

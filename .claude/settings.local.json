@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -rf \"c:/Claude/nzcc-portal/src/app/\\(student\\)/messages/[threadId]\")",
+      "Bash(rm -rf \"c:/Claude/nzcc-portal/src/app/api/student/messages/[threadId]\")",
+      "Bash(npx prisma *)",
+      "Bash(rm -f /c/Claude/nzcc-portal/check-threads.mjs)",
+      "Bash(npx tsc *)",
+      "Bash(cat /tmp/dev.log 2>&1 | tail -30)",
+      "Read(//tmp/**)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/login)",
+      "Bash(npx playwright *)"
+    ]
+  }
+}

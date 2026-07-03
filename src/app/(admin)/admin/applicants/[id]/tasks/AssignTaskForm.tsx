@@ -1,0 +1,81 @@
+﻿"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+
+export function AssignTaskForm({ applicationId, staffId }: { applicationId: string; staffId: string }) {
+  const router = useRouter();
+  const [form, setForm] = useState({
+    title: "", description: "", dueDate: "", isRequired: true, requiresDocument: false, documentInstructions: "",
+  });
+  const [isLoading, setIsLoading] = useState(false);
+
+  function set(field: string, value: string | boolean) {
+    setForm((p) => ({ ...p, [field]: value }));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setIsLoading(true);
+    await fetch(`/api/admin/applicants/${applicationId}/tasks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...form, assignedById: staffId }),
+    });
+    setIsLoading(false);
+    setForm({ title: "", description: "", dueDate: "", isRequired: true, requiresDocument: false, documentInstructions: "" });
+    router.refresh();
+  }
+
+  const textareaStyle = {
+    backgroundColor: "#F8F8F6",
+    border: "1.5px solid rgba(0,0,0,0.1)",
+    borderRadius: "8px",
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-4">
+      <Input label="Task title" value={form.title} onChange={(e) => set("title", e.target.value)} required />
+      <div>
+        <label className="block text-sm font-semibold text-text mb-1.5">Description</label>
+        <textarea
+          value={form.description}
+          onChange={(e) => set("description", e.target.value)}
+          rows={3}
+          className="w-full px-3 py-2.5 text-sm focus:outline-none text-text placeholder:text-text-light resize-none"
+          style={textareaStyle}
+          required
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <Input label="Due date (optional)" type="date" value={form.dueDate} onChange={(e) => set("dueDate", e.target.value)} />
+        <div className="flex flex-col gap-3 pt-6">
+          <label className="flex items-center gap-2 text-sm text-text cursor-pointer">
+            <input type="checkbox" checked={form.isRequired} onChange={(e) => set("isRequired", e.target.checked)} className="accent-green" />
+            Required
+          </label>
+          <label className="flex items-center gap-2 text-sm text-text cursor-pointer">
+            <input type="checkbox" checked={form.requiresDocument} onChange={(e) => set("requiresDocument", e.target.checked)} className="accent-green" />
+            Requires document upload
+          </label>
+        </div>
+      </div>
+      {form.requiresDocument && (
+        <div>
+          <label className="block text-sm font-semibold text-text mb-1.5">Document instructions</label>
+          <textarea
+            value={form.documentInstructions}
+            onChange={(e) => set("documentInstructions", e.target.value)}
+            rows={2}
+            className="w-full px-3 py-2.5 text-sm focus:outline-none text-text placeholder:text-text-light resize-none"
+            style={textareaStyle}
+            placeholder="Tell the student what to upload…"
+          />
+        </div>
+      )}
+      <Button type="submit" isLoading={isLoading} size="sm">Assign Task</Button>
+    </form>
+  );
+}

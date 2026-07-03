@@ -1,0 +1,417 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum UserRole {
+  STUDENT
+  STAFF
+}
+
+enum StudentCategory {
+  DOMESTIC
+  INTERNATIONAL
+}
+
+enum YearLevel {
+  YEAR_1
+  YEAR_2
+}
+
+enum ApplicationStageKey {
+  NEW_SUBMITTED
+  INTAKE_REVIEW
+  ACADEMIC_CHECK
+  INTERVIEW_AND_ESSAY
+  COMMITTEE
+  OFFERED
+  ENROLLED
+}
+
+enum ApplicationStatus {
+  IN_PROGRESS
+  UNDER_REVIEW
+  OFFER_MADE
+  OFFER_ACCEPTED
+  ENROLLED
+  WITHDRAWN
+  DECLINED
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum StaffTaskStatus {
+  PENDING
+  COMPLETE
+}
+
+enum DocumentStatus {
+  PENDING_REVIEW
+  VERIFIED
+  REJECTED
+}
+
+enum MessageSenderRole {
+  STUDENT
+  STAFF
+}
+
+enum TimelineEventType {
+  STAGE_CHANGE
+  TASK_ASSIGNED
+  TASK_COMPLETED
+  TASK_REJECTED
+  DOCUMENT_UPLOADED
+  DOCUMENT_VERIFIED
+  MESSAGE_SENT
+  NOTE_ADDED
+  OFFER_ISSUED
+  ENROLMENT_CONFIRMED
+}
+
+enum PermissionKey {
+  VIEW_APPLICANTS
+  EDIT_APPLICANT_PROFILE
+  ADVANCE_APPLICATION_STAGE
+  WITHDRAW_APPLICATION
+  ASSIGN_TASKS
+  REVIEW_TASK_SUBMISSIONS
+  DELETE_TASKS
+  MANAGE_OWN_TASKS
+  REQUEST_DOCUMENTS
+  VIEW_DOCUMENTS
+  VERIFY_DOCUMENTS
+  DELETE_DOCUMENTS
+  SEND_MESSAGES
+  VIEW_ALL_MESSAGES
+  VIEW_INTERNATIONAL
+  EDIT_INTERNATIONAL
+  MANAGE_STAFF_USERS
+  MANAGE_PERMISSIONS
+  VIEW_REPORTS
+}
+
+enum VisaStatus {
+  NOT_YET
+  APPLIED
+  RECEIVED
+}
+
+enum IeltsStatus {
+  NOT_YET
+  IN_PROGRESS
+  CONFIRMED
+  WAIVED
+  REQUIRED
+}
+
+enum InsuranceStatus {
+  NOT_YET
+  CONFIRMED
+}
+
+// ─────────────────────────────────────────────
+// USER
+// ─────────────────────────────────────────────
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  role          UserRole
+  firstName     String
+  lastName      String
+  avatarUrl     String?
+  isActive      Boolean  @default(true)
+  isGlobalAdmin Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  application      Application?
+  staffPermissions StaffPermission[]
+  assignedTasks    Task[]              @relation("TaskAssignedBy")
+  messages         Message[]
+  verifiedDocuments Document[]         @relation("DocumentVerifiedBy")
+  stageAdvances    ApplicationStageHistory[] @relation("StageAdvancedBy")
+  staffTasks       StaffTask[]         @relation("StaffTaskAssignedTo")
+  createdStaffTasks StaffTask[]        @relation("StaffTaskCreatedBy")
+  createdTimelineEvents TimelineEvent[] @relation("TimelineEventCreatedBy")
+
+  @@index([email])
+  @@index([role])
+}
+
+// ─────────────────────────────────────────────
+// INTAKE YEAR
+// ─────────────────────────────────────────────
+
+model IntakeYear {
+  id           String        @id @default(cuid())
+  year         Int           @unique
+  label        String
+  isActive     Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+
+  applications Application[]
+}
+
+// ─────────────────────────────────────────────
+// APPLICATION
+// ─────────────────────────────────────────────
+
+model Application {
+  id               String              @id @default(cuid())
+  studentId        String              @unique
+  student          User                @relation(fields: [studentId], references: [id])
+  intakeYearId     String
+  intakeYear       IntakeYear          @relation(fields: [intakeYearId], references: [id])
+  applicantNumber  String              @unique
+  category         StudentCategory
+  yearLevel        YearLevel
+  currentStage     ApplicationStageKey @default(NEW_SUBMITTED)
+  status           ApplicationStatus   @default(IN_PROGRESS)
+  flagNote         String?
+  sortOrder        Int               @default(0)
+
+  // personal details
+  dateOfBirth      DateTime?
+  phone            String?
+  address          String?
+  suburb           String?
+  city             String?
+  postcode         String?
+  country          String?
+
+  // academic info
+  currentSchool    String?
+  nceaLevel        String?
+
+  // emergency contact
+  guardianName     String?
+  guardianEmail    String?
+  guardianPhone    String?
+  guardianRelation String?
+
+  submittedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  stageHistory           ApplicationStageHistory[]
+  tasks                  Task[]
+  documents              Document[]
+  messageThread          MessageThread?
+  timelineEvents         TimelineEvent[]
+  internationalCompliance InternationalCompliance?
+  staffTasks             StaffTask[]
+
+  @@index([intakeYearId])
+  @@index([currentStage])
+  @@index([status])
+  @@index([category])
+}
+
+// ─────────────────────────────────────────────
+// INTERNATIONAL COMPLIANCE
+// ─────────────────────────────────────────────
+
+model InternationalCompliance {
+  id                   String          @id @default(cuid())
+  applicationId        String          @unique
+  application          Application     @relation(fields: [applicationId], references: [id])
+  offerOfPlaceIssued   Boolean         @default(false)
+  visaStatus           VisaStatus      @default(NOT_YET)
+  healthInsuranceStatus InsuranceStatus @default(NOT_YET)
+  ieltsStatus          IeltsStatus     @default(NOT_YET)
+  notes                String?
+  updatedAt            DateTime        @updatedAt
+}
+
+// ─────────────────────────────────────────────
+// APPLICATION STAGE HISTORY
+// ─────────────────────────────────────────────
+
+model ApplicationStageHistory {
+  id            String              @id @default(cuid())
+  applicationId String
+  application   Application         @relation(fields: [applicationId], references: [id])
+  fromStage     ApplicationStageKey?
+  toStage       ApplicationStageKey
+  advancedById  String
+  advancedBy    User                @relation("StageAdvancedBy", fields: [advancedById], references: [id])
+  notes         String?
+  createdAt     DateTime            @default(now())
+
+  @@index([applicationId])
+}
+
+// ─────────────────────────────────────────────
+// TASK (student-facing)
+// ─────────────────────────────────────────────
+
+model Task {
+  id                   String      @id @default(cuid())
+  applicationId        String
+  application          Application @relation(fields: [applicationId], references: [id])
+  title                String
+  description          String
+  status               TaskStatus  @default(PENDING)
+  dueDate              DateTime?
+  isRequired           Boolean     @default(true)
+  requiresDocument     Boolean     @default(false)
+  documentInstructions String?
+  assignedById         String
+  assignedBy           User        @relation("TaskAssignedBy", fields: [assignedById], references: [id])
+  completedAt          DateTime?
+  studentNote          String?
+  reviewedAt           DateTime?
+  reviewNote           String?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  documents    Document[]
+
+  @@index([applicationId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+// ─────────────────────────────────────────────
+// STAFF TASK (admin's own task queue)
+// ─────────────────────────────────────────────
+
+model StaffTask {
+  id            String          @id @default(cuid())
+  assignedToId  String
+  assignedTo    User            @relation("StaffTaskAssignedTo", fields: [assignedToId], references: [id])
+  createdById   String
+  createdBy     User            @relation("StaffTaskCreatedBy", fields: [createdById], references: [id])
+  applicationId String?
+  application   Application?    @relation(fields: [applicationId], references: [id])
+  title         String
+  description   String?
+  status        StaffTaskStatus @default(PENDING)
+  dueDate       DateTime?
+  isInternal    Boolean         @default(false)
+  completedAt   DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([assignedToId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+// ─────────────────────────────────────────────
+// DOCUMENT
+// ─────────────────────────────────────────────
+
+model Document {
+  id               String         @id @default(cuid())
+  applicationId    String
+  application      Application    @relation(fields: [applicationId], references: [id])
+  taskId           String?
+  task             Task?          @relation(fields: [taskId], references: [id])
+  filename         String
+  storedFilename   String
+  mimeType         String
+  sizeBytes        Int
+  storageKey       String
+  storageProvider  String         @default("local")
+  documentType     String
+  description      String?
+  status           DocumentStatus @default(PENDING_REVIEW)
+  verifiedById     String?
+  verifiedBy       User?          @relation("DocumentVerifiedBy", fields: [verifiedById], references: [id])
+  verifiedAt       DateTime?
+  verificationNote String?
+  uploadedAt       DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([applicationId])
+  @@index([taskId])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────
+// MESSAGE THREAD + MESSAGE
+// ─────────────────────────────────────────────
+
+model MessageThread {
+  id            String      @id @default(cuid())
+  applicationId String      @unique
+  application   Application @relation(fields: [applicationId], references: [id])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  messages Message[]
+}
+
+model Message {
+  id            String            @id @default(cuid())
+  threadId      String
+  thread        MessageThread     @relation(fields: [threadId], references: [id])
+  senderRole    MessageSenderRole
+  senderId      String
+  sender        User              @relation(fields: [senderId], references: [id])
+  body          String
+  isRead        Boolean           @default(false)
+  readAt        DateTime?
+  sentAt        DateTime          @default(now())
+
+  @@index([threadId])
+  @@index([isRead])
+}
+
+// ─────────────────────────────────────────────
+// TIMELINE EVENT
+// ─────────────────────────────────────────────
+
+model TimelineEvent {
+  id                 String              @id @default(cuid())
+  applicationId      String
+  application        Application         @relation(fields: [applicationId], references: [id])
+  eventType          TimelineEventType
+  title              String
+  description        String?
+  isVisibleToStudent Boolean             @default(true)
+  relatedTaskId      String?
+  relatedDocumentId  String?
+  relatedStageKey    ApplicationStageKey?
+  occurredAt         DateTime            @default(now())
+  createdById        String?
+  createdBy          User?               @relation("TimelineEventCreatedBy", fields: [createdById], references: [id])
+
+  @@index([applicationId])
+  @@index([occurredAt])
+}
+
+// ─────────────────────────────────────────────
+// STAFF PERMISSIONS
+// ─────────────────────────────────────────────
+
+model StaffPermission {
+  id          String        @id @default(cuid())
+  staffUserId String
+  staffUser   User          @relation(fields: [staffUserId], references: [id])
+  permissionKey PermissionKey
+  granted     Boolean       @default(false)
+  grantedById String?
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([staffUserId, permissionKey])
+  @@index([staffUserId])
+}
