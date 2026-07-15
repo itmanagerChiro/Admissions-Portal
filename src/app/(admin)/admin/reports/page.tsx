@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
+import { WipBanner } from "@/components/ui/WipBanner";
 import { STAGE_ORDER, STAGE_LABELS } from "@/lib/stages";
 import { ReportsCharts } from "./ReportsCharts";
 
@@ -45,6 +46,9 @@ export default async function ReportsPage() {
 
   return (
     <div className="px-8 py-7 max-w-4xl">
+      <WipBanner>
+        This page is work in progress. Only some logic has been implemented. Feedback is needed on what sort of reports you&apos;d like to see.
+      </WipBanner>
       <div className="flex items-start justify-between mb-8">
         <div>
           <h1 className="font-serif text-2xl text-text">Reports &amp; Insights</h1>

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { decode } from "@auth/core/jwt";
 
-const PUBLIC_PATHS = ["/login", "/register", "/forgot-password"];
+const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/verify-email"];
 const STUDENT_PATHS = ["/dashboard", "/tasks", "/documents", "/timeline", "/messages", "/profile"];
 
 const SESSION_COOKIE = "authjs.session-token";

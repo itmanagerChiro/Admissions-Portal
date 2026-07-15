@@ -3,8 +3,10 @@ import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requirePermission, hasPermission } from "@/lib/permissions";
 import { Badge } from "@/components/ui/Badge";
-import { AssignTaskForm } from "./AssignTaskForm";
+import { AssignTaskToggle } from "./AssignTaskToggle";
 import { TaskReviewPanel } from "./TaskReviewPanel";
+import { TaskActions } from "./TaskActions";
+import { TaskOptionsMenu } from "./TaskOptionsMenu";
 import Link from "next/link";
 
 export default async function ApplicantTasksPage({ params }: { params: Promise<{ id: string }> }) {
@@ -13,24 +15,34 @@ export default async function ApplicantTasksPage({ params }: { params: Promise<{
   if (!session?.user || session.user.role !== "STAFF") redirect("/login");
   requirePermission(session, "VIEW_APPLICANTS");
 
-  const app = await prisma.application.findUnique({
-    where: { id },
-    include: {
-      student: { select: { firstName: true, lastName: true } },
-      tasks: {
-        orderBy: { createdAt: "desc" },
-        include: {
-          assignedBy: { select: { firstName: true, lastName: true } },
-          documents: { select: { id: true, filename: true, storageKey: true, status: true } },
+  const [app, staffOptions] = await Promise.all([
+    prisma.application.findUnique({
+      where: { id },
+      include: {
+        student: { select: { firstName: true, lastName: true } },
+        tasks: {
+          orderBy: { createdAt: "desc" },
+          include: {
+            assignedBy: { select: { firstName: true, lastName: true } },
+            assignedTo: { select: { id: true, firstName: true, lastName: true } },
+            reviewedBy: { select: { firstName: true, lastName: true } },
+            documents: { select: { id: true, filename: true, storageKey: true, status: true } },
+          },
         },
       },
-    },
-  });
+    }),
+    prisma.user.findMany({
+      where: { role: "STAFF", isActive: true },
+      orderBy: { lastName: "asc" },
+      select: { id: true, firstName: true, lastName: true },
+    }),
+  ]);
 
   if (!app) notFound();
 
   const canAssign = hasPermission(session, "ASSIGN_TASKS");
   const canReview = hasPermission(session, "REVIEW_TASK_SUBMISSIONS");
+  const canDelete = hasPermission(session, "DELETE_TASKS");
 
   return (
     <div className="px-8 py-7 max-w-3xl">
@@ -42,10 +54,7 @@ export default async function ApplicantTasksPage({ params }: { params: Promise<{
       </h1>
 
       {canAssign && (
-        <div className="mb-8">
-          <p className="text-[11px] font-semibold uppercase tracking-widest mb-3" style={{ color: "#999" }}>Assign New Task</p>
-          <AssignTaskForm applicationId={id} staffId={session.user.id} />
-        </div>
+        <AssignTaskToggle applicationId={id} staffId={session.user.id} />
       )}
 
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -69,21 +78,42 @@ export default async function ApplicantTasksPage({ params }: { params: Promise<{
                 }}
               >
                 <div className="flex items-start justify-between mb-1">
-                  <p className="text-sm font-semibold" style={{ color: "#222" }}>{task.title}</p>
-                  <Badge variant={
-                    task.status === "APPROVED" ? "green" :
-                    task.status === "REJECTED" ? "red" :
-                    task.status === "SUBMITTED" ? "gold" :
-                    task.status === "IN_PROGRESS" ? "blue" : "muted"
-                  }>
-                    {task.status.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase())}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold" style={{ color: "#222" }}>{task.title}</p>
+                    <Badge variant={task.audience === "STAFF" ? "blue" : "outline"}>
+                      {task.audience === "STAFF" ? "Staff" : "Student"}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge variant={
+                      task.status === "APPROVED" ? "green" :
+                      task.status === "REJECTED" ? "red" :
+                      task.status === "SUBMITTED" ? "gold" :
+                      task.status === "IN_PROGRESS" ? "blue" : "muted"
+                    }>
+                      {task.status.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase())}
+                    </Badge>
+                    {canDelete && <TaskOptionsMenu applicationId={id} taskId={task.id} />}
+                  </div>
                 </div>
                 {task.description && <p className="text-xs mb-1" style={{ color: "#aaa" }}>{task.description}</p>}
                 <p className="text-xs mb-3" style={{ color: "#bbb" }}>
                   Assigned by {task.assignedBy.firstName} {task.assignedBy.lastName}
+                  {task.assignedTo && ` · Assigned to ${task.assignedTo.firstName} ${task.assignedTo.lastName}`}
                   {task.dueDate && ` · Due ${new Date(task.dueDate).toLocaleDateString("en-NZ")}`}
                 </p>
+
+                {task.audience === "STAFF" && canAssign && (
+                  <div className="mb-3">
+                    <TaskActions
+                      applicationId={id}
+                      taskId={task.id}
+                      status={task.status}
+                      assignedToId={task.assignedTo?.id ?? null}
+                      staffOptions={staffOptions}
+                    />
+                  </div>
+                )}
 
                 {task.status === "SUBMITTED" && canReview && (
                   <TaskReviewPanel
@@ -91,10 +121,11 @@ export default async function ApplicantTasksPage({ params }: { params: Promise<{
                     applicationId={id}
                     studentNote={task.studentNote}
                     documents={task.documents}
+                    acknowledgedAt={task.acknowledgedAt}
                   />
                 )}
 
-                {(task.status === "APPROVED" || task.status === "REJECTED") && task.reviewNote && (
+                {(task.status === "APPROVED" || task.status === "REJECTED") && (
                   <div
                     className="px-3 py-2 text-xs rounded-lg"
                     style={{
@@ -106,7 +137,14 @@ export default async function ApplicantTasksPage({ params }: { params: Promise<{
                     <strong className="block mb-0.5" style={{ color: task.status === "APPROVED" ? "#22c55e" : "#c0392b" }}>
                       {task.status === "APPROVED" ? "Approved" : "Rejected"}
                     </strong>
-                    {task.reviewNote}
+                    {task.reviewNote && <p className="mb-1">{task.reviewNote}</p>}
+                    {task.reviewedAt && (
+                      <p style={{ color: "#999" }}>
+                        {task.reviewedBy ? `${task.reviewedBy.firstName} ${task.reviewedBy.lastName}` : "Staff"}
+                        {" · "}
+                        {new Date(task.reviewedAt).toLocaleString("en-NZ", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" })}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

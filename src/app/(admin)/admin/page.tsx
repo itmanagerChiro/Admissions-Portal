@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
+import { NotImplementedButton } from "@/components/ui/NotImplementedButton";
 import { STAGE_LABELS } from "@/lib/stages";
 import type { ApplicationStageKey } from "@/generated/prisma/client";
 
@@ -97,9 +98,9 @@ export default async function AdminDashboardPage() {
           <Link href="/admin/applicants" className="px-4 py-2 rounded-lg bg-white shadow-sm text-sm font-medium text-text-muted hover:text-green transition-colors">
             Export CSV
           </Link>
-          <Link href="/admin/applicants/new" className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors" style={{ backgroundColor: "#114E3B" }}>
+          <NotImplementedButton className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
             + New Applicant
-          </Link>
+          </NotImplementedButton>
         </div>
       </div>
 

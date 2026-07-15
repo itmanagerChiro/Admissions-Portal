@@ -10,7 +10,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const guard = permissionGuard(session, "ASSIGN_TASKS");
   if (guard) return guard;
 
-  const { title, description, dueDate, isRequired, requiresDocument, documentInstructions } = await req.json();
+  const { title, description, dueDate, isRequired, requiresDocument, documentInstructions, requiredDocumentCategory } = await req.json();
 
   if (!title?.trim()) return NextResponse.json({ error: "Title required" }, { status: 400 });
 
@@ -23,6 +23,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       isRequired: !!isRequired,
       requiresDocument: !!requiresDocument,
       documentInstructions,
+      requiredDocumentCategory: requiresDocument ? (requiredDocumentCategory ?? "ANY") : "ANY",
       assignedById: session!.user.id,
     },
   });

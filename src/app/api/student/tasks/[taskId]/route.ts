@@ -16,7 +16,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ taskId
   if (!application) return Response.json({ error: "Not found" }, { status: 404 });
 
   const task = await prisma.task.findFirst({
-    where: { id: taskId, applicationId: application.id },
+    where: { id: taskId, applicationId: application.id, audience: "STUDENT" },
   });
   if (!task) return Response.json({ error: "Not found" }, { status: 404 });
 

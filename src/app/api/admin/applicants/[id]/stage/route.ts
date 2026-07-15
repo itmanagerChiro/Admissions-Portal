@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissionGuard } from "@/lib/permissions";
 import { createTimelineEvent, STAGE_ORDER } from "@/lib/timeline";
+import { generateTasksForStage } from "@/lib/taskTemplates";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -13,6 +14,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const body = await req.json();
   const nextStage = body.toStage ?? body.stage;
   const notes: string = body.notes ?? "";
+  // IDs of open tasks (from other stages) the staff member chose to mark complete now.
+  const completeTaskIds: string[] = Array.isArray(body.completeTaskIds) ? body.completeTaskIds : [];
+  // IDs of already-existing tasks for the target stage the staff member chose to reset (re-do), rather than keep.
+  const resetTaskIds: string[] = Array.isArray(body.resetTaskIds) ? body.resetTaskIds : [];
 
   const app = await prisma.application.findUnique({ where: { id }, select: { currentStage: true } });
   if (!app) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -32,7 +37,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         notes,
       },
     }),
+    ...(completeTaskIds.length > 0
+      ? [
+          prisma.task.updateMany({
+            where: { id: { in: completeTaskIds }, applicationId: id },
+            data: { status: "APPROVED", completedAt: new Date() },
+          }),
+        ]
+      : []),
+    ...(resetTaskIds.length > 0
+      ? [
+          prisma.task.updateMany({
+            where: { id: { in: resetTaskIds }, applicationId: id },
+            data: { status: "PENDING", completedAt: null, reviewedAt: null, reviewNote: null },
+          }),
+        ]
+      : []),
   ]);
+
+  await generateTasksForStage(id, nextStage, session!.user.id);
 
   await createTimelineEvent({
     applicationId: id,

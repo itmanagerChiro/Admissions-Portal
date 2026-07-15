@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getStorageProvider } from "@/lib/storage";
+import { isMimeTypeAllowed, categoryRejectionMessage } from "@/lib/documentValidation";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -24,6 +25,17 @@ export async function POST(req: Request) {
   const MAX_SIZE = 10 * 1024 * 1024;
   if (file.size > MAX_SIZE) {
     return Response.json({ error: "File exceeds 10MB limit." }, { status: 400 });
+  }
+
+  if (taskId) {
+    const task = await prisma.task.findFirst({
+      where: { id: taskId, applicationId: application.id },
+      select: { requiredDocumentCategory: true },
+    });
+    if (!task) return Response.json({ error: "Task not found." }, { status: 404 });
+    if (!isMimeTypeAllowed(file.type, task.requiredDocumentCategory)) {
+      return Response.json({ error: categoryRejectionMessage(task.requiredDocumentCategory) }, { status: 400 });
+    }
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());

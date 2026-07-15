@@ -54,9 +54,20 @@ enum TaskStatus {
   REJECTED
 }
 
+enum TaskAudience {
+  STAFF
+  STUDENT
+}
+
 enum StaffTaskStatus {
   PENDING
   COMPLETE
+}
+
+enum RequiredDocumentCategory {
+  ANY
+  DOCUMENT
+  IMAGE
 }
 
 enum DocumentStatus {
@@ -129,30 +140,77 @@ enum InsuranceStatus {
 // ─────────────────────────────────────────────
 
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
+  id            String    @id @default(cuid())
+  email         String    @unique
   passwordHash  String
   role          UserRole
   firstName     String
   lastName      String
   avatarUrl     String?
-  isActive      Boolean  @default(true)
-  isGlobalAdmin Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  isActive      Boolean   @default(true)
+  isGlobalAdmin Boolean   @default(false)
+  emailVerified DateTime?
+  totpSecret    String?
+  totpEnabled   Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   application      Application?
   staffPermissions StaffPermission[]
   assignedTasks    Task[]              @relation("TaskAssignedBy")
+  tasksAssignedToMe Task[]             @relation("TaskAssignedTo")
+  acknowledgedTasks Task[]             @relation("TaskAcknowledgedBy")
+  reviewedTasks    Task[]              @relation("TaskReviewedBy")
+  createdTaskTemplates TaskTemplate[]  @relation("TaskTemplateCreatedBy")
   messages         Message[]
   verifiedDocuments Document[]         @relation("DocumentVerifiedBy")
   stageAdvances    ApplicationStageHistory[] @relation("StageAdvancedBy")
   staffTasks       StaffTask[]         @relation("StaffTaskAssignedTo")
   createdStaffTasks StaffTask[]        @relation("StaffTaskCreatedBy")
   createdTimelineEvents TimelineEvent[] @relation("TimelineEventCreatedBy")
+  verificationTokens VerificationToken[]
+  updatedEmailTemplates EmailTemplate[]
 
   @@index([email])
   @@index([role])
+}
+
+enum VerificationTokenPurpose {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+model VerificationToken {
+  id        String                   @id @default(cuid())
+  userId    String
+  user      User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String                   @unique
+  purpose   VerificationTokenPurpose
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime                 @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+enum EmailTemplateKey {
+  ACCOUNT_VERIFICATION
+  PASSWORD_RESET
+  STAFF_ACCOUNT_CREATED
+}
+
+model EmailTemplate {
+  id          String            @id @default(cuid())
+  key         EmailTemplateKey  @unique
+  name        String
+  description String?
+  subject     String
+  bodyHtml    String
+  updatedById String?
+  updatedBy   User?             @relation(fields: [updatedById], references: [id])
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 }
 
 // ─────────────────────────────────────────────
@@ -259,34 +317,75 @@ model ApplicationStageHistory {
 }
 
 // ─────────────────────────────────────────────
-// TASK (student-facing)
+// TASK TEMPLATE (staff-configurable, per stage)
+// ─────────────────────────────────────────────
+
+model TaskTemplate {
+  id                   String              @id @default(cuid())
+  stageKey             ApplicationStageKey
+  title                String
+  description          String
+  audience             TaskAudience        @default(STAFF)
+  dueDays              Int?
+  requiresDocument     Boolean             @default(false)
+  documentInstructions String?
+  requiredDocumentCategory RequiredDocumentCategory @default(ANY)
+  sortOrder            Int                 @default(0)
+  isActive             Boolean             @default(true)
+  createdById          String?
+  createdBy            User?               @relation("TaskTemplateCreatedBy", fields: [createdById], references: [id])
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  tasks Task[]
+
+  @@index([stageKey])
+}
+
+// ─────────────────────────────────────────────
+// TASK (staff- and student-facing, per application)
 // ─────────────────────────────────────────────
 
 model Task {
-  id                   String      @id @default(cuid())
+  id                   String        @id @default(cuid())
   applicationId        String
-  application          Application @relation(fields: [applicationId], references: [id])
+  application          Application   @relation(fields: [applicationId], references: [id])
   title                String
   description          String
-  status               TaskStatus  @default(PENDING)
+  status               TaskStatus    @default(PENDING)
+  audience             TaskAudience  @default(STUDENT)
   dueDate              DateTime?
-  isRequired           Boolean     @default(true)
-  requiresDocument     Boolean     @default(false)
+  isRequired           Boolean       @default(true)
+  requiresDocument     Boolean       @default(false)
   documentInstructions String?
+  requiredDocumentCategory RequiredDocumentCategory @default(ANY)
   assignedById         String
-  assignedBy           User        @relation("TaskAssignedBy", fields: [assignedById], references: [id])
+  assignedBy           User          @relation("TaskAssignedBy", fields: [assignedById], references: [id])
+  assignedToId         String?
+  assignedTo           User?         @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
+  templateId           String?
+  template             TaskTemplate? @relation(fields: [templateId], references: [id])
+  stageKey             ApplicationStageKey?
   completedAt          DateTime?
   studentNote          String?
   reviewedAt           DateTime?
   reviewNote           String?
-  createdAt            DateTime    @default(now())
-  updatedAt            DateTime    @updatedAt
+  reviewedById         String?
+  reviewedBy           User?         @relation("TaskReviewedBy", fields: [reviewedById], references: [id])
+  acknowledgedAt       DateTime?
+  acknowledgedById     String?
+  acknowledgedBy       User?         @relation("TaskAcknowledgedBy", fields: [acknowledgedById], references: [id])
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 
   documents    Document[]
 
   @@index([applicationId])
   @@index([status])
   @@index([dueDate])
+  @@index([assignedToId])
+  @@index([stageKey])
+  @@index([status, acknowledgedAt])
 }
 
 // ─────────────────────────────────────────────

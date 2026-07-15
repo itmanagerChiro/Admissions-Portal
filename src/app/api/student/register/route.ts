@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { issueVerificationToken } from "@/lib/verification";
+import { sendTemplatedEmail, buildAppUrl } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   const { firstName, lastName, email, password } = await req.json();
@@ -24,9 +26,9 @@ export async function POST(req: NextRequest) {
 
   // Generate applicant number
   const count = await prisma.application.count();
-  const applicantNumber = `#${String(count + 1).padStart(4, "0")}`;
+  const applicantNumber = String(count + 1).padStart(4, "0");
 
-  await prisma.$transaction(async (tx) => {
+  const userId = await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
       data: {
         firstName,
@@ -60,7 +62,18 @@ export async function POST(req: NextRequest) {
         relatedStageKey: "NEW_SUBMITTED",
       },
     });
+
+    return user.id;
   });
+
+  const token = await issueVerificationToken(userId, "EMAIL_VERIFICATION");
+  const verifyUrl = buildAppUrl(`/verify-email?token=${token}`);
+
+  try {
+    await sendTemplatedEmail("ACCOUNT_VERIFICATION", email, { firstName, verifyUrl });
+  } catch (err) {
+    console.error("Failed to send verification email:", err);
+  }
 
   return Response.json({ success: true }, { status: 201 });
 }

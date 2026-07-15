@@ -22,7 +22,7 @@ export default async function DashboardPage() {
     include: {
       intakeYear: true,
       tasks: {
-        where: { status: { in: ["PENDING", "IN_PROGRESS", "REJECTED"] } },
+        where: { status: { in: ["PENDING", "IN_PROGRESS", "REJECTED"] }, audience: "STUDENT" },
         orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
         take: 6,
       },

@@ -1,8 +1,13 @@
 import NextAuth from "next-auth";
+import { CredentialsSignin } from "@auth/core/errors";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import type { UserRole, PermissionKey } from "@/generated/prisma/client";
+
+class EmailNotVerifiedError extends CredentialsSignin {
+  code = "EMAIL_NOT_VERIFIED";
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -31,6 +36,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           user.passwordHash
         );
         if (!validPassword) return null;
+
+        if (user.role === "STUDENT" && !user.emailVerified) {
+          throw new EmailNotVerifiedError();
+        }
 
         return {
           id: user.id,

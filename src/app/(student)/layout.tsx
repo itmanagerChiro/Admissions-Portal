@@ -17,7 +17,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
       id: true,
       _count: {
         select: {
-          tasks: { where: { status: { in: ["PENDING", "IN_PROGRESS", "REJECTED"] } } },
+          tasks: { where: { status: { in: ["PENDING", "IN_PROGRESS", "REJECTED"] }, audience: "STUDENT" } },
         },
       },
       messageThread: {

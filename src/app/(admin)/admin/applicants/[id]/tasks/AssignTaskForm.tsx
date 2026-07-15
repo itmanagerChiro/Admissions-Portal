@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
-export function AssignTaskForm({ applicationId, staffId }: { applicationId: string; staffId: string }) {
+export function AssignTaskForm({ applicationId, staffId, onDone }: { applicationId: string; staffId: string; onDone?: () => void }) {
   const router = useRouter();
   const [form, setForm] = useState({
-    title: "", description: "", dueDate: "", isRequired: true, requiresDocument: false, documentInstructions: "",
+    title: "", description: "", dueDate: "", isRequired: true, requiresDocument: false, documentInstructions: "", requiredDocumentCategory: "ANY",
   });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -25,8 +25,9 @@ export function AssignTaskForm({ applicationId, staffId }: { applicationId: stri
       body: JSON.stringify({ ...form, assignedById: staffId }),
     });
     setIsLoading(false);
-    setForm({ title: "", description: "", dueDate: "", isRequired: true, requiresDocument: false, documentInstructions: "" });
+    setForm({ title: "", description: "", dueDate: "", isRequired: true, requiresDocument: false, documentInstructions: "", requiredDocumentCategory: "ANY" });
     router.refresh();
+    onDone?.();
   }
 
   const textareaStyle = {
@@ -63,16 +64,31 @@ export function AssignTaskForm({ applicationId, staffId }: { applicationId: stri
         </div>
       </div>
       {form.requiresDocument && (
-        <div>
-          <label className="block text-sm font-semibold text-text mb-1.5">Document instructions</label>
-          <textarea
-            value={form.documentInstructions}
-            onChange={(e) => set("documentInstructions", e.target.value)}
-            rows={2}
-            className="w-full px-3 py-2.5 text-sm focus:outline-none text-text placeholder:text-text-light resize-none"
-            style={textareaStyle}
-            placeholder="Tell the student what to upload…"
-          />
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="block text-sm font-semibold text-text mb-1.5">Document instructions</label>
+            <textarea
+              value={form.documentInstructions}
+              onChange={(e) => set("documentInstructions", e.target.value)}
+              rows={2}
+              className="w-full px-3 py-2.5 text-sm focus:outline-none text-text placeholder:text-text-light resize-none"
+              style={textareaStyle}
+              placeholder="Tell the student what to upload…"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-text mb-1.5">Accepted file type</label>
+            <select
+              value={form.requiredDocumentCategory}
+              onChange={(e) => set("requiredDocumentCategory", e.target.value)}
+              className="w-full px-3 py-2.5 text-sm focus:outline-none text-text rounded-lg"
+              style={textareaStyle}
+            >
+              <option value="ANY">Any file type</option>
+              <option value="DOCUMENT">Document (PDF/Word) — e.g. transcripts</option>
+              <option value="IMAGE">Image only — e.g. passport or ID</option>
+            </select>
+          </div>
         </div>
       )}
       <Button type="submit" isLoading={isLoading} size="sm">Assign Task</Button>

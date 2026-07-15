@@ -14,10 +14,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [unverified, setUnverified] = useState(false);
+  const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent">("idle");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setUnverified(false);
+    setResendStatus("idle");
     setIsLoading(true);
 
     const result = await signIn("credentials", {
@@ -29,12 +33,27 @@ export default function LoginPage() {
     setIsLoading(false);
 
     if (result?.error) {
-      setError("Invalid email or password.");
+      if (result.code === "EMAIL_NOT_VERIFIED") {
+        setError("Please verify your email before signing in. Check your inbox for the verification link.");
+        setUnverified(true);
+      } else {
+        setError("Invalid email or password.");
+      }
       return;
     }
 
     router.push("/admin");
     router.refresh();
+  }
+
+  async function handleResend() {
+    setResendStatus("sending");
+    await fetch("/api/resend-verification", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    setResendStatus("sent");
   }
 
   return (
@@ -74,9 +93,19 @@ export default function LoginPage() {
             />
 
             {error && (
-              <p className="text-sm text-red-flag bg-red-flag/5 border border-red-flag/20 rounded-lg px-3 py-2">
-                {error}
-              </p>
+              <div className="text-sm text-red-flag bg-red-flag/5 border border-red-flag/20 rounded-lg px-3 py-2">
+                <p>{error}</p>
+                {unverified && (
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resendStatus !== "idle"}
+                    className="mt-1.5 font-semibold underline disabled:opacity-60"
+                  >
+                    {resendStatus === "sent" ? "Verification email sent" : resendStatus === "sending" ? "Sending…" : "Resend verification email"}
+                  </button>
+                )}
+              </div>
             )}
 
             <Button type="submit" isLoading={isLoading} className="w-full justify-center">

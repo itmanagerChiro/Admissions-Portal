@@ -16,14 +16,15 @@ interface TaskReviewPanelProps {
   applicationId: string;
   studentNote: string | null;
   documents: Document[];
+  acknowledgedAt: string | Date | null;
 }
 
-export function TaskReviewPanel({ taskId, applicationId, studentNote, documents }: TaskReviewPanelProps) {
+export function TaskReviewPanel({ taskId, applicationId, studentNote, documents, acknowledgedAt }: TaskReviewPanelProps) {
   const router = useRouter();
   const [reviewNote, setReviewNote] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  async function handleAction(action: "approve" | "reject") {
+  async function handleAction(action: "approve" | "reject" | "acknowledge") {
     if (action === "reject" && !reviewNote.trim()) {
       alert("Please provide a reason for rejection.");
       return;
@@ -40,7 +41,24 @@ export function TaskReviewPanel({ taskId, applicationId, studentNote, documents 
 
   return (
     <div className="mt-3 rounded-lg p-4" style={{ backgroundColor: "rgba(199,154,59,0.06)", borderLeft: "3px solid #C79A3B" }}>
-      <p className="text-xs font-semibold text-text mb-3">Review Submission</p>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-semibold text-text">Review Submission</p>
+        {!acknowledgedAt && (
+          <button
+            onClick={() => handleAction("acknowledge")}
+            disabled={isLoading}
+            className="text-[11px] font-semibold px-2.5 py-1 rounded-full transition-colors"
+            style={{ backgroundColor: "rgba(199,154,59,0.15)", color: "#C79A3B" }}
+          >
+            Mark as seen
+          </button>
+        )}
+        {acknowledgedAt && (
+          <span className="text-[11px] font-medium" style={{ color: "#aaa" }}>
+            Seen {new Date(acknowledgedAt).toLocaleDateString("en-NZ", { day: "numeric", month: "short" })}
+          </span>
+        )}
+      </div>
 
       {studentNote && (
         <div className="mb-3">

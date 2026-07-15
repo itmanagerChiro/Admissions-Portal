@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requirePermission, hasPermission } from "@/lib/permissions";
 import { Badge } from "@/components/ui/Badge";
+import { WipBanner } from "@/components/ui/WipBanner";
 import { STAGE_ORDER, STAGE_LABELS } from "@/lib/stages";
 import Link from "next/link";
 import { PipelineBoard } from "./PipelineBoard";
@@ -59,6 +60,9 @@ export default async function PipelinePage({
 
   return (
     <div className="flex flex-col h-full">
+      <div className="px-8 pt-5">
+        <WipBanner>This page is work in progress. Some logic has been implemented.</WipBanner>
+      </div>
       <div className="px-8 py-5 border-b flex items-center justify-between">
         <div>
           <h1 className="font-serif text-2xl text-text">Admissions Pipeline</h1>

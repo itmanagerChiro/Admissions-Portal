@@ -16,7 +16,7 @@ export default async function TasksPage() {
   if (!application) return <div className="p-8 text-text-muted">Application not found.</div>;
 
   const tasks = await prisma.task.findMany({
-    where: { applicationId: application.id },
+    where: { applicationId: application.id, audience: "STUDENT" },
     orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
   });
 

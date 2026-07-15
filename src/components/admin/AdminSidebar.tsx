@@ -9,6 +9,7 @@ interface AdminSidebarProps {
   isGlobalAdmin: boolean;
   pendingStaffTaskCount: number;
   intlAttentionCount: number;
+  unseenSubmissionCount: number;
   userName: string;
   isAdmin: boolean;
   activeIntakeLabel?: string;
@@ -26,6 +27,9 @@ function UsersIcon() {
 }
 function TaskIcon() {
   return <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>;
+}
+function InboxIcon() {
+  return <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M3 12h4l2 3h6l2-3h4M5 5h14l2 7v7a2 2 0 01-2 2H5a2 2 0 01-2-2v-7l2-7z" /></svg>;
 }
 function GlobeIcon() {
   return <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
@@ -78,7 +82,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function AdminSidebar({ isGlobalAdmin, pendingStaffTaskCount, intlAttentionCount, userName, activeIntakeLabel }: AdminSidebarProps) {
+export function AdminSidebar({ isGlobalAdmin, pendingStaffTaskCount, intlAttentionCount, unseenSubmissionCount, userName, activeIntakeLabel }: AdminSidebarProps) {
   return (
     <aside className="w-56 flex-shrink-0 flex flex-col h-full" style={{ backgroundColor: "#114E3B" }}>
       {/* Logo */}
@@ -114,7 +118,8 @@ export function AdminSidebar({ isGlobalAdmin, pendingStaffTaskCount, intlAttenti
 
         <SectionLabel>Applicants</SectionLabel>
         <NavLink href="/admin/applicants" icon={<UsersIcon />}>All Applicants</NavLink>
-        <NavLink href="/admin/tasks" icon={<TaskIcon />} badge={pendingStaffTaskCount || undefined}>My Tasks</NavLink>
+        <NavLink href="/admin/tasks" icon={<TaskIcon />} badge={pendingStaffTaskCount || undefined} exact>My Tasks</NavLink>
+        <NavLink href="/admin/tasks/submissions" icon={<InboxIcon />} badge={unseenSubmissionCount || undefined}>Submissions</NavLink>
 
         <SectionLabel>Workflows</SectionLabel>
         <NavLink href="/admin/international" icon={<GlobeIcon />} badge={intlAttentionCount || undefined}>International</NavLink>

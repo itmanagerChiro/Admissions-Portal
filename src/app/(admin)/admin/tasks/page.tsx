@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { Badge } from "@/components/ui/Badge";
+import { WipBanner } from "@/components/ui/WipBanner";
 import { AddStaffTaskForm } from "./AddStaffTaskForm";
 import Link from "next/link";
 
@@ -36,6 +37,7 @@ export default async function AdminTasksPage() {
 
   return (
     <div className="px-8 py-7 max-w-3xl">
+      <WipBanner>This page is work in progress. Only some logic has been implemented.</WipBanner>
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="font-serif text-2xl text-text">{session.user.firstName}&apos;s Queue</h1>

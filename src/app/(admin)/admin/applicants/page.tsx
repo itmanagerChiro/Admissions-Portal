@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
+import { NotImplementedButton } from "@/components/ui/NotImplementedButton";
 import { STAGE_LABELS, STAGE_ORDER } from "@/lib/stages";
 import { ApplicantsControls } from "./ApplicantsControls";
 import type { ApplicationStageKey, Prisma } from "@/generated/prisma/client";
@@ -100,13 +101,9 @@ export default async function AllApplicantsPage({
           <button className="px-4 py-2 rounded-lg bg-white shadow-sm text-sm font-medium text-text-muted hover:text-green transition-colors">
             Export
           </button>
-          <Link
-            href="/admin/applicants/new"
-            className="px-4 py-2 rounded-lg text-white text-sm font-semibold transition-colors"
-            style={{ backgroundColor: "#114E3B" }}
-          >
+          <NotImplementedButton className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
             + New
-          </Link>
+          </NotImplementedButton>
         </div>
       </div>
 

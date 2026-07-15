@@ -17,7 +17,7 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ tas
   if (!application) redirect("/dashboard");
 
   const task = await prisma.task.findFirst({
-    where: { id: taskId, applicationId: application.id },
+    where: { id: taskId, applicationId: application.id, audience: "STUDENT" },
     include: {
       documents: { orderBy: { uploadedAt: "desc" } },
     },
@@ -114,6 +114,7 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ tas
           taskId={task.id}
           requiresDocument={task.requiresDocument}
           documentInstructions={task.documentInstructions}
+          requiredDocumentCategory={task.requiredDocumentCategory}
           existingNote={task.studentNote}
         />
       )}

@@ -7,6 +7,8 @@ import { STAGE_LABELS, STAGE_ORDER } from "@/lib/stages";
 import { StageAdvancer } from "./StageAdvancer";
 import { EditApplicantForm } from "./EditApplicantForm";
 import { MessagesChatWidget } from "./MessagesChatWidget";
+import { TaskCompleteCheckbox } from "./TaskCompleteCheckbox";
+import { DocumentVerifyButtons } from "./documents/DocumentVerifyButtons";
 import Link from "next/link";
 import type { ApplicationStageKey } from "@/generated/prisma/client";
 
@@ -31,7 +33,7 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
     include: {
       student: true,
       intakeYear: true,
-      tasks: { orderBy: { createdAt: "desc" }, take: 5 },
+      tasks: { where: { status: { not: "APPROVED" } }, orderBy: { createdAt: "desc" }, take: 5 },
       documents: { orderBy: { uploadedAt: "desc" }, take: 5 },
       messageThread: {
         include: { messages: { orderBy: { sentAt: "asc" } } },
@@ -46,10 +48,10 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
   const canAssignTasks = hasPermission(session, "ASSIGN_TASKS");
   const canSendMessages = hasPermission(session, "SEND_MESSAGES");
   const canViewDocs = hasPermission(session, "VIEW_DOCUMENTS");
+  const canVerifyDocs = hasPermission(session, "VERIFY_DOCUMENTS");
   const canEditProfile = hasPermission(session, "EDIT_APPLICANT_PROFILE");
 
   const currentIndex = STAGE_ORDER.indexOf(app.currentStage);
-  const nextStage = currentIndex < STAGE_ORDER.length - 1 ? STAGE_ORDER[currentIndex + 1] : null;
 
   return (
     <div className="px-8 py-7 max-w-4xl">
@@ -85,12 +87,10 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
             )}
           </div>
         </div>
-        {canAdvance && nextStage && (
+        {canAdvance && (
           <StageAdvancer
             applicationId={app.id}
             currentStage={app.currentStage}
-            nextStage={nextStage}
-            staffId={session.user.id}
           />
         )}
       </div>
@@ -201,7 +201,16 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
           ) : (
             app.tasks.map((task, i) => (
               <div key={task.id} className="flex items-center justify-between px-5 py-3 text-xs" style={{ borderBottom: i < app.tasks.length - 1 ? "1px solid rgba(0,0,0,0.05)" : "none" }}>
-                <span className="truncate max-w-[60%]" style={{ color: "#333" }}>{task.title}</span>
+                <span className="flex items-center gap-2.5 truncate max-w-[60%]">
+                  {canAssignTasks && (
+                    <TaskCompleteCheckbox
+                      applicationId={id}
+                      taskId={task.id}
+                      isComplete={task.status === "APPROVED"}
+                    />
+                  )}
+                  <span className="truncate" style={{ color: "#333" }}>{task.title}</span>
+                </span>
                 <Badge variant={task.status === "APPROVED" ? "green" : task.status === "REJECTED" ? "red" : task.status === "SUBMITTED" ? "gold" : "muted"}>
                   {task.status.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase())}
                 </Badge>
@@ -221,11 +230,17 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
               <p className="px-5 py-4 text-xs" style={{ color: "#888" }}>No documents uploaded.</p>
             ) : (
               app.documents.map((doc, i) => (
-                <div key={doc.id} className="flex items-center justify-between px-5 py-3 text-xs" style={{ borderBottom: i < app.documents.length - 1 ? "1px solid rgba(0,0,0,0.05)" : "none" }}>
-                  <span className="truncate max-w-[60%]" style={{ color: "#333" }}>{doc.filename}</span>
-                  <Badge variant={doc.status === "VERIFIED" ? "green" : doc.status === "REJECTED" ? "red" : "muted"}>
-                    {doc.status.replace("_", " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase())}
-                  </Badge>
+                <div key={doc.id} className="flex items-center justify-between gap-3 px-5 py-3 text-xs" style={{ borderBottom: i < app.documents.length - 1 ? "1px solid rgba(0,0,0,0.05)" : "none" }}>
+                  <span className="truncate max-w-[45%]" style={{ color: "#333" }}>{doc.filename}</span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {canVerifyDocs && doc.status === "PENDING_REVIEW" ? (
+                      <DocumentVerifyButtons documentId={doc.id} applicationId={id} />
+                    ) : (
+                      <Badge variant={doc.status === "VERIFIED" ? "green" : doc.status === "REJECTED" ? "red" : "muted"}>
+                        {doc.status.replace("_", " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase())}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               ))
             )}

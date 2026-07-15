@@ -3,15 +3,24 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { CATEGORY_ACCEPT } from "@/lib/documentValidation";
+import type { RequiredDocumentCategory } from "@/generated/prisma/client";
 
 interface TaskSubmitFormProps {
   taskId: string;
   requiresDocument: boolean;
   documentInstructions: string | null;
+  requiredDocumentCategory: RequiredDocumentCategory;
   existingNote: string | null;
 }
 
-export function TaskSubmitForm({ taskId, requiresDocument, documentInstructions, existingNote }: TaskSubmitFormProps) {
+const CATEGORY_HINT: Record<RequiredDocumentCategory, string> = {
+  ANY: "PDF, Word or image · Max 10MB",
+  DOCUMENT: "PDF or Word document · Max 10MB",
+  IMAGE: "Image (JPG, PNG or WEBP) · Max 10MB",
+};
+
+export function TaskSubmitForm({ taskId, requiresDocument, documentInstructions, requiredDocumentCategory, existingNote }: TaskSubmitFormProps) {
   const router = useRouter();
   const [note, setNote] = useState(existingNote ?? "");
   const [file, setFile] = useState<File | null>(null);
@@ -83,7 +92,7 @@ export function TaskSubmitForm({ taskId, requiresDocument, documentInstructions,
             >
               <input
                 type="file"
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                accept={CATEGORY_ACCEPT[requiredDocumentCategory]}
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 className="hidden"
                 id="file-upload"
@@ -97,7 +106,7 @@ export function TaskSubmitForm({ taskId, requiresDocument, documentInstructions,
                 ) : (
                   <>
                     <p className="text-sm" style={{ color: "#aaa" }}>Click to upload</p>
-                    <p className="text-xs mt-1" style={{ color: "#ccc" }}>PDF, Word or image · Max 10MB</p>
+                    <p className="text-xs mt-1" style={{ color: "#ccc" }}>{CATEGORY_HINT[requiredDocumentCategory]}</p>
                   </>
                 )}
               </label>

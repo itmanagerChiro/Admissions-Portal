@@ -12,7 +12,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const activeIntake = await prisma.intakeYear.findFirst({ where: { isActive: true } });
 
-  const [pendingStaffTaskCount, intlAttentionCount] = await Promise.all([
+  const [pendingStaffTaskCount, intlAttentionCount, unseenSubmissionCount] = await Promise.all([
     prisma.staffTask.count({
       where: { assignedToId: session.user.id, status: "PENDING" },
     }),
@@ -28,6 +28,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           },
         })
       : Promise.resolve(0),
+    prisma.task.count({
+      where: { status: "SUBMITTED", acknowledgedAt: null },
+    }),
   ]);
 
   return (
@@ -36,6 +39,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         isGlobalAdmin={session.user.isGlobalAdmin}
         pendingStaffTaskCount={pendingStaffTaskCount}
         intlAttentionCount={intlAttentionCount}
+        unseenSubmissionCount={unseenSubmissionCount}
         userName={`${session.user.firstName} ${session.user.lastName}`}
         isAdmin={!!session.user.isGlobalAdmin}
         activeIntakeLabel={activeIntake?.label}
