@@ -3,14 +3,16 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { IntakeYearForm } from "./IntakeYearForm";
 import { TaskTemplateManager } from "./TaskTemplateManager";
+import { EmailNotificationsToggle } from "./EmailNotificationsToggle";
 
 export default async function SettingsPage() {
   const session = await auth();
   if (!session?.user || session.user.role !== "STAFF" || !session.user.isGlobalAdmin) redirect("/admin");
 
-  const [intakeYears, taskTemplates] = await Promise.all([
+  const [intakeYears, taskTemplates, appSettings] = await Promise.all([
     prisma.intakeYear.findMany({ orderBy: { year: "desc" } }),
     prisma.taskTemplate.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } }),
+    prisma.appSettings.findUnique({ where: { id: "singleton" } }),
   ]);
 
   return (
@@ -28,6 +30,11 @@ export default async function SettingsPage() {
           Configure the tasks automatically created when an application enters each stage.
         </p>
         <TaskTemplateManager templates={taskTemplates} />
+      </section>
+
+      <section className="mt-10">
+        <h2 className="font-serif text-lg text-text mb-4">Email Notifications</h2>
+        <EmailNotificationsToggle enabled={appSettings?.emailNotificationsEnabled ?? false} />
       </section>
     </div>
   );

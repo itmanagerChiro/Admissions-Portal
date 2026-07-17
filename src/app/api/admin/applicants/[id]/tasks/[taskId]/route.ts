@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissionGuard } from "@/lib/permissions";
 import { createTimelineEvent } from "@/lib/timeline";
+import { notifyAdminsOfAllTasksComplete } from "@/lib/notifications";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string; taskId: string }> }) {
@@ -42,6 +43,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       createdById: session!.user.id,
     });
 
+    if (newStatus === "APPROVED") {
+      const remaining = await prisma.task.count({
+        where: { applicationId: id, isRequired: true, status: { not: "APPROVED" } },
+      });
+      if (remaining === 0) await notifyAdminsOfAllTasksComplete(id);
+    }
+
     return NextResponse.json({ success: true });
   }
 
@@ -79,6 +87,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         relatedTaskId: taskId,
         createdById: session!.user.id,
       });
+
+      const remaining = await prisma.task.count({
+        where: { applicationId: id, isRequired: true, status: { not: "APPROVED" } },
+      });
+      if (remaining === 0) await notifyAdminsOfAllTasksComplete(id);
     }
 
     return NextResponse.json({ success: true });

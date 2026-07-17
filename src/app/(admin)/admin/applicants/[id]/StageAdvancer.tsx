@@ -25,6 +25,7 @@ export function StageAdvancer({ applicationId, currentStage }: StageAdvancerProp
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [targetStage, setTargetStage] = useState<ApplicationStageKey | null>(null);
   const [notes, setNotes] = useState("");
+  const [notifyStudent, setNotifyStudent] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [staleTasks, setStaleTasks] = useState<PreviewTask[]>([]);
@@ -50,6 +51,7 @@ export function StageAdvancer({ applicationId, currentStage }: StageAdvancerProp
     setTargetStage(stage);
     setIsMenuOpen(false);
     setNotes("");
+    setNotifyStudent(true);
     setCompleteIds(new Set());
     setIsPreviewLoading(true);
     const res = await fetch(`/api/admin/applicants/${applicationId}/stage-preview`, {
@@ -93,6 +95,7 @@ export function StageAdvancer({ applicationId, currentStage }: StageAdvancerProp
       body: JSON.stringify({
         toStage: targetStage,
         notes,
+        notifyStudent,
         completeTaskIds: Array.from(completeIds),
         resetTaskIds,
       }),
@@ -210,6 +213,10 @@ export function StageAdvancer({ applicationId, currentStage }: StageAdvancerProp
                 placeholder="Add any notes about this stage change…"
               />
             </div>
+            <label className="flex items-center gap-2 text-sm" style={{ color: "#333" }}>
+              <input type="checkbox" checked={notifyStudent} onChange={(e) => setNotifyStudent(e.target.checked)} />
+              Send student email notification
+            </label>
             <div className="flex gap-3 justify-end">
               <Button variant="ghost" onClick={() => setTargetStage(null)}>Cancel</Button>
               <Button onClick={handleAdvance} isLoading={isLoading}>Confirm</Button>

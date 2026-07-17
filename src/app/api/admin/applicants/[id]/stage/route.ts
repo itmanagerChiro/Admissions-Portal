@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { permissionGuard } from "@/lib/permissions";
 import { createTimelineEvent, STAGE_ORDER } from "@/lib/timeline";
 import { generateTasksForStage } from "@/lib/taskTemplates";
+import { notifyStudentOfNewTasks, notifyStudentOfStageChange } from "@/lib/notifications";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -18,6 +19,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const completeTaskIds: string[] = Array.isArray(body.completeTaskIds) ? body.completeTaskIds : [];
   // IDs of already-existing tasks for the target stage the staff member chose to reset (re-do), rather than keep.
   const resetTaskIds: string[] = Array.isArray(body.resetTaskIds) ? body.resetTaskIds : [];
+  const notifyStudent: boolean = body.notifyStudent ?? true;
 
   const app = await prisma.application.findUnique({ where: { id }, select: { currentStage: true } });
   if (!app) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -55,7 +57,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       : []),
   ]);
 
-  await generateTasksForStage(id, nextStage, session!.user.id);
+  const newTasks = await generateTasksForStage(id, nextStage, session!.user.id);
 
   await createTimelineEvent({
     applicationId: id,
@@ -68,6 +70,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     isVisibleToStudent: true,
     createdById: session!.user.id,
   });
+
+  await notifyStudentOfNewTasks(id, newTasks);
+  if (notifyStudent) await notifyStudentOfStageChange(id, nextStage);
 
   return NextResponse.json({ success: true, stage: nextStage });
 }

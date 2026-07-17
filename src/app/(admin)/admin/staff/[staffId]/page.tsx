@@ -14,7 +14,7 @@ const PERMISSION_GROUPS: { label: string; keys: PermissionKey[] }[] = [
   },
   {
     label: "Tasks",
-    keys: ["ASSIGN_TASKS", "REVIEW_TASK_SUBMISSIONS", "DELETE_TASKS", "MANAGE_OWN_TASKS"],
+    keys: ["ASSIGN_TASKS", "REVIEW_TASK_SUBMISSIONS", "DELETE_TASKS", "MANAGE_OWN_TASKS", "REMIND_TASK"],
   },
   {
     label: "Documents",
@@ -47,6 +47,7 @@ const PERMISSION_LABELS: Record<string, string> = {
   REVIEW_TASK_SUBMISSIONS: "Review task submissions",
   DELETE_TASKS: "Delete tasks",
   MANAGE_OWN_TASKS: "Manage own task queue",
+  REMIND_TASK: "Send task reminders",
   REQUEST_DOCUMENTS: "Request documents",
   VIEW_DOCUMENTS: "View documents",
   VERIFY_DOCUMENTS: "Verify / reject documents",

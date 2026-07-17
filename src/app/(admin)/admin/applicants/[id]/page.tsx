@@ -5,6 +5,7 @@ import { requirePermission, hasPermission } from "@/lib/permissions";
 import { Badge } from "@/components/ui/Badge";
 import { STAGE_LABELS, STAGE_ORDER } from "@/lib/stages";
 import { StageAdvancer } from "./StageAdvancer";
+import { SendReminderButton } from "./SendReminderButton";
 import { EditApplicantForm } from "./EditApplicantForm";
 import { MessagesChatWidget } from "./MessagesChatWidget";
 import { TaskCompleteCheckbox } from "./TaskCompleteCheckbox";
@@ -49,6 +50,7 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
   const canSendMessages = hasPermission(session, "SEND_MESSAGES");
   const canViewDocs = hasPermission(session, "VIEW_DOCUMENTS");
   const canVerifyDocs = hasPermission(session, "VERIFY_DOCUMENTS");
+  const canRemindTasks = hasPermission(session, "REMIND_TASK");
   const canEditProfile = hasPermission(session, "EDIT_APPLICANT_PROFILE");
 
   const currentIndex = STAGE_ORDER.indexOf(app.currentStage);
@@ -87,12 +89,15 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
             )}
           </div>
         </div>
-        {canAdvance && (
-          <StageAdvancer
-            applicationId={app.id}
-            currentStage={app.currentStage}
-          />
-        )}
+        <div className="flex items-start gap-3">
+          {canRemindTasks && <SendReminderButton applicationId={app.id} />}
+          {canAdvance && (
+            <StageAdvancer
+              applicationId={app.id}
+              currentStage={app.currentStage}
+            />
+          )}
+        </div>
       </div>
 
       {/* Stage progress bar */}

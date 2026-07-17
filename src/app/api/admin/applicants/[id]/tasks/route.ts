@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissionGuard } from "@/lib/permissions";
 import { createTimelineEvent } from "@/lib/timeline";
+import { notifyStudentOfNewTasks } from "@/lib/notifications";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -37,6 +38,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     relatedTaskId: task.id,
     createdById: session!.user.id,
   });
+
+  await notifyStudentOfNewTasks(id, [task]);
 
   return NextResponse.json(task, { status: 201 });
 }

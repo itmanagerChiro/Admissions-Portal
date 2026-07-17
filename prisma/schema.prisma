@@ -114,6 +114,7 @@ enum PermissionKey {
   MANAGE_STAFF_USERS
   MANAGE_PERMISSIONS
   VIEW_REPORTS
+  REMIND_TASK
 }
 
 enum VisaStatus {
@@ -198,6 +199,10 @@ enum EmailTemplateKey {
   ACCOUNT_VERIFICATION
   PASSWORD_RESET
   STAFF_ACCOUNT_CREATED
+  STAGE_CHANGE_NOTIFICATION
+  TASKS_ASSIGNED
+  TASK_REMINDER
+  TASKS_ALL_COMPLETE_ADMIN
 }
 
 model EmailTemplate {
@@ -211,6 +216,12 @@ model EmailTemplate {
   updatedBy   User?             @relation(fields: [updatedById], references: [id])
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
+}
+
+model AppSettings {
+  id                         String   @id @default("singleton")
+  emailNotificationsEnabled  Boolean  @default(false)
+  updatedAt                  DateTime @updatedAt
 }
 
 // ─────────────────────────────────────────────

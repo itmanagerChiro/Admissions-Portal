@@ -64,6 +64,41 @@ export const DEFAULT_EMAIL_TEMPLATES: Record<
 <p>Please verify your email to activate your account:</p>
 <p><a href="{{verifyUrl}}">Verify my email</a></p>`,
   },
+  STAGE_CHANGE_NOTIFICATION: {
+    name: "Application Stage Changed",
+    description: "Sent to a student when their application moves to a new stage.",
+    subject: "Your application status has been updated",
+    bodyHtml: `<p>Kia ora {{firstName}},</p>
+<p>Your application has moved to the <strong>{{stageName}}</strong> stage.</p>
+<p><a href="{{portalUrl}}">View your application</a></p>`,
+  },
+  TASKS_ASSIGNED: {
+    name: "New Tasks Assigned",
+    description: "Sent to a student when one or more new tasks are assigned to their application.",
+    subject: "New tasks assigned to your application",
+    bodyHtml: `<p>Kia ora {{firstName}},</p>
+<p>Please complete your tasks. The following have been added to your application:</p>
+<ul>{{taskList}}</ul>
+<p><a href="{{portalUrl}}">View your tasks</a></p>`,
+  },
+  TASK_REMINDER: {
+    name: "Task Reminder",
+    description: "Sent on demand by staff to remind a student of outstanding tasks.",
+    subject: "Reminder: you have outstanding tasks",
+    bodyHtml: `<p>Kia ora {{firstName}},</p>
+<p>This is a reminder that you still have outstanding tasks on your application:</p>
+<ul>{{taskList}}</ul>
+<p>Please complete these as soon as possible.</p>
+<p><a href="{{portalUrl}}">View your tasks</a></p>`,
+  },
+  TASKS_ALL_COMPLETE_ADMIN: {
+    name: "Student Completed All Tasks",
+    description: "Sent to staff when a student completes all of their required tasks.",
+    subject: "{{studentName}} has completed all required tasks",
+    bodyHtml: `<p>{{studentName}} has completed all of their required tasks:</p>
+<ul>{{taskList}}</ul>
+<p><a href="{{applicantUrl}}">View application</a></p>`,
+  },
 };
 
 async function getTemplate(key: EmailTemplateKey) {
