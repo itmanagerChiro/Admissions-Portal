@@ -3,16 +3,19 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
-import { STAGE_LABELS } from "@/lib/stages";
+import { STAGE_STATUS_LABELS } from "@/lib/stages";
 import Link from "next/link";
 
 const STAGE_BADGE: Record<string, "olive" | "gold" | "blue" | "green" | "muted" | "purple"> = {
   NEW_SUBMITTED: "muted",
   INTAKE_REVIEW: "blue",
   ACADEMIC_CHECK: "purple",
-  INTERVIEW_AND_ESSAY: "gold",
+  INTERVIEW: "gold",
+  ESSAY: "gold",
   COMMITTEE: "gold",
-  OFFERED: "green",
+  OFFER_CONDITIONAL: "green",
+  OFFER_UNCONDITIONAL: "green",
+  ACCEPTED: "green",
   ENROLLED: "olive",
 };
 
@@ -127,7 +130,7 @@ export function ComplianceRow({ application, canEdit, isLast }: {
       </td>
       <td className="px-5 py-4">
         <Badge variant={STAGE_BADGE[application.currentStage] ?? "muted"}>
-          {STAGE_LABELS[application.currentStage] ?? application.currentStage}
+          {STAGE_STATUS_LABELS[application.currentStage as keyof typeof STAGE_STATUS_LABELS] ?? application.currentStage}
         </Badge>
       </td>
       <td className="px-5 py-4">

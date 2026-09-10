@@ -9,6 +9,10 @@ class EmailNotVerifiedError extends CredentialsSignin {
   code = "EMAIL_NOT_VERIFIED";
 }
 
+class AccountDeletionRequestedError extends CredentialsSignin {
+  code = "ACCOUNT_DELETION_REQUESTED";
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
@@ -36,6 +40,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           user.passwordHash
         );
         if (!validPassword) return null;
+
+        if (user.deletionRequestedAt) {
+          throw new AccountDeletionRequestedError();
+        }
 
         if (user.role === "STUDENT" && !user.emailVerified) {
           throw new EmailNotVerifiedError();

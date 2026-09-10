@@ -14,7 +14,7 @@ export default async function DocumentsPage() {
       documents: { orderBy: { uploadedAt: "desc" } },
       tasks: {
         where: { requiresDocument: true, status: { in: ["PENDING", "IN_PROGRESS", "REJECTED"] } },
-        select: { id: true, title: true },
+        select: { id: true, title: true, requiredDocumentCategory: true },
       },
     },
   });

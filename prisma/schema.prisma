@@ -26,13 +26,61 @@ enum YearLevel {
   YEAR_2
 }
 
+enum Gender {
+  MALE
+  FEMALE
+  DIVERSE
+  OTHER
+}
+
+enum MaoriPacificaStatus {
+  NEITHER
+  MAORI
+  PACIFICA
+  BOTH
+}
+
+enum EnglishProficiencyStatus {
+  FIRST_LANGUAGE
+  IELTS_BOOKED
+  IELTS_CERTIFIED
+  HANDBOOK_MET
+}
+
+enum ReferralSource {
+  ADVERTISEMENT
+  CAREER_FAIR
+  ADVISOR
+  INTERNET
+  EXPO
+  SOCIAL_MEDIA
+  CHIROPRACTOR
+  NZCC_ALUMNUS
+  FRIEND_FAMILY
+  FACULTY_STAFF
+  OTHER
+}
+
+enum EducationLevel {
+  SECONDARY
+  TERTIARY
+}
+
+enum ChiropracticExperienceStatus {
+  OBSERVING
+  UNDER_CARE
+}
+
 enum ApplicationStageKey {
   NEW_SUBMITTED
   INTAKE_REVIEW
   ACADEMIC_CHECK
-  INTERVIEW_AND_ESSAY
+  INTERVIEW
+  ESSAY
   COMMITTEE
-  OFFERED
+  OFFER_CONDITIONAL
+  OFFER_UNCONDITIONAL
+  ACCEPTED
   ENROLLED
 }
 
@@ -64,6 +112,23 @@ enum StaffTaskStatus {
   COMPLETE
 }
 
+enum InterviewFormat {
+  ONLINE
+  IN_PERSON
+}
+
+enum CommitteeDecisionType {
+  APPROVE
+  DECLINE
+  DEFER
+}
+
+enum FlagColor {
+  GREEN
+  YELLOW
+  RED
+}
+
 enum RequiredDocumentCategory {
   ANY
   DOCUMENT
@@ -91,6 +156,9 @@ enum TimelineEventType {
   MESSAGE_SENT
   NOTE_ADDED
   OFFER_ISSUED
+  OFFER_ACCEPTED
+  OFFER_DECLINED
+  OFFER_CONDITION_SATISFIED
   ENROLMENT_CONFIRMED
 }
 
@@ -136,41 +204,79 @@ enum InsuranceStatus {
   CONFIRMED
 }
 
+enum OfferType {
+  CONDITIONAL
+  UNCONDITIONAL
+}
+
+enum OfferResponseStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+enum DepositPaymentMethod {
+  BANK_TRANSFER
+  CREDIT_CARD
+}
+
+enum DepositStatus {
+  NOT_PAID
+  PENDING_REVIEW
+  PAID
+}
+
+enum OfferConditionStatus {
+  PENDING
+  SATISFIED
+  WAIVED
+}
+
 // ─────────────────────────────────────────────
 // USER
 // ─────────────────────────────────────────────
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  passwordHash  String
-  role          UserRole
-  firstName     String
-  lastName      String
-  avatarUrl     String?
-  isActive      Boolean   @default(true)
-  isGlobalAdmin Boolean   @default(false)
-  emailVerified DateTime?
-  totpSecret    String?
-  totpEnabled   Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  passwordHash        String
+  role                UserRole
+  firstName           String
+  lastName            String
+  avatarUrl           String?
+  isActive            Boolean   @default(true)
+  isGlobalAdmin       Boolean   @default(false)
+  emailVerified       DateTime?
+  totpSecret          String?
+  totpEnabled         Boolean   @default(false)
+  deletionRequestedAt DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  application      Application?
-  staffPermissions StaffPermission[]
-  assignedTasks    Task[]              @relation("TaskAssignedBy")
-  tasksAssignedToMe Task[]             @relation("TaskAssignedTo")
-  acknowledgedTasks Task[]             @relation("TaskAcknowledgedBy")
-  reviewedTasks    Task[]              @relation("TaskReviewedBy")
-  createdTaskTemplates TaskTemplate[]  @relation("TaskTemplateCreatedBy")
-  messages         Message[]
-  verifiedDocuments Document[]         @relation("DocumentVerifiedBy")
-  stageAdvances    ApplicationStageHistory[] @relation("StageAdvancedBy")
-  staffTasks       StaffTask[]         @relation("StaffTaskAssignedTo")
-  createdStaffTasks StaffTask[]        @relation("StaffTaskCreatedBy")
-  createdTimelineEvents TimelineEvent[] @relation("TimelineEventCreatedBy")
-  verificationTokens VerificationToken[]
-  updatedEmailTemplates EmailTemplate[]
+  application              Application?
+  staffPermissions         StaffPermission[]
+  assignedTasks            Task[]                    @relation("TaskAssignedBy")
+  tasksAssignedToMe        Task[]                    @relation("TaskAssignedTo")
+  acknowledgedTasks        Task[]                    @relation("TaskAcknowledgedBy")
+  reviewedTasks            Task[]                    @relation("TaskReviewedBy")
+  createdTaskTemplates     TaskTemplate[]            @relation("TaskTemplateCreatedBy")
+  messages                 Message[]
+  mailMessages             MailMessage[]
+  verifiedDocuments        Document[]                @relation("DocumentVerifiedBy")
+  stageAdvances            ApplicationStageHistory[] @relation("StageAdvancedBy")
+  staffTasks               StaffTask[]               @relation("StaffTaskAssignedTo")
+  createdStaffTasks        StaffTask[]               @relation("StaffTaskCreatedBy")
+  createdTimelineEvents    TimelineEvent[]           @relation("TimelineEventCreatedBy")
+  verificationTokens       VerificationToken[]
+  updatedEmailTemplates    EmailTemplate[]
+  issuedOffers             Offer[]                   @relation("OfferIssuedBy")
+  satisfiedOfferConditions OfferCondition[]          @relation("OfferConditionSatisfiedBy")
+  authoredNotes            Note[]                    @relation("NoteAuthor")
+  auditLogEntries          AuditLog[]                @relation("AuditLogUser")
+  interviewReviews         InterviewReview[]         @relation("InterviewReviewedBy")
+  essayReviews             EssayReview[]             @relation("EssayReviewedBy")
+  committeeDecisions       CommitteeDecision[]       @relation("CommitteeDecisionDecidedBy")
 
   @@index([email])
   @@index([role])
@@ -203,25 +309,33 @@ enum EmailTemplateKey {
   TASKS_ASSIGNED
   TASK_REMINDER
   TASKS_ALL_COMPLETE_ADMIN
+  OFFER_ISSUED
+  OFFER_RESPONSE_ADMIN
+  DOCUMENT_UPLOADED_ADMIN
+  DOCUMENT_REJECTED
+  APPLICATION_DECLINED
+  ACCOUNT_DELETION_REQUESTED
+  BANK_TRANSFER_SUBMITTED_ADMIN
+  BANK_TRANSFER_APPROVED
 }
 
 model EmailTemplate {
-  id          String            @id @default(cuid())
-  key         EmailTemplateKey  @unique
+  id          String           @id @default(cuid())
+  key         EmailTemplateKey @unique
   name        String
   description String?
   subject     String
   bodyHtml    String
   updatedById String?
-  updatedBy   User?             @relation(fields: [updatedById], references: [id])
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  updatedBy   User?            @relation(fields: [updatedById], references: [id])
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 }
 
 model AppSettings {
-  id                         String   @id @default("singleton")
-  emailNotificationsEnabled  Boolean  @default(false)
-  updatedAt                  DateTime @updatedAt
+  id                        String   @id @default("singleton")
+  emailNotificationsEnabled Boolean  @default(false)
+  updatedAt                 DateTime @updatedAt
 }
 
 // ─────────────────────────────────────────────
@@ -229,11 +343,15 @@ model AppSettings {
 // ─────────────────────────────────────────────
 
 model IntakeYear {
-  id           String        @id @default(cuid())
-  year         Int           @unique
-  label        String
-  isActive     Boolean       @default(false)
-  createdAt    DateTime      @default(now())
+  id                  String   @id @default(cuid())
+  year                Int      @unique
+  label               String
+  isActive            Boolean  @default(false)
+  isVisible           Boolean  @default(true)
+  isOpenForApplications Boolean @default(true)
+  isArchived          Boolean  @default(false)
+  archivedAt          DateTime?
+  createdAt           DateTime @default(now())
 
   applications Application[]
 }
@@ -243,31 +361,83 @@ model IntakeYear {
 // ─────────────────────────────────────────────
 
 model Application {
-  id               String              @id @default(cuid())
-  studentId        String              @unique
-  student          User                @relation(fields: [studentId], references: [id])
-  intakeYearId     String
-  intakeYear       IntakeYear          @relation(fields: [intakeYearId], references: [id])
-  applicantNumber  String              @unique
-  category         StudentCategory
-  yearLevel        YearLevel
-  currentStage     ApplicationStageKey @default(NEW_SUBMITTED)
-  status           ApplicationStatus   @default(IN_PROGRESS)
-  flagNote         String?
-  sortOrder        Int               @default(0)
+  id              String                @id @default(cuid())
+  studentId       String                @unique
+  student         User                  @relation(fields: [studentId], references: [id])
+  intakeYearId    String
+  intakeYear      IntakeYear            @relation(fields: [intakeYearId], references: [id])
+  applicantNumber String                @unique
+  category        StudentCategory
+  yearLevel       YearLevel
+  currentStage    ApplicationStageKey   @default(NEW_SUBMITTED)
+  status          ApplicationStatus     @default(IN_PROGRESS)
+  flagNote        String?
+  flagColor       FlagColor?
+  sortOrder       Int                   @default(0)
+  depositStatus   DepositStatus         @default(NOT_PAID)
+  depositMethod   DepositPaymentMethod?
+  depositPaidAt   DateTime?
 
   // personal details
-  dateOfBirth      DateTime?
-  phone            String?
-  address          String?
-  suburb           String?
-  city             String?
-  postcode         String?
-  country          String?
+  middleName            String?
+  preferredFirstName    String?
+  dateOfBirth           DateTime?
+  gender                Gender?
+  preferredPronouns     String?
+  maoriPacificaStatus   MaoriPacificaStatus?
+  citizenshipCountry    String?
+  phone                 String?
+  address               String?
+  suburb                String?
+  city                  String?
+  postcode              String?
+  country               String?
+  useAlternativeAddress Boolean              @default(false)
+  alternativeAddress    String?
+  alternativeSuburb     String?
+  alternativeCity       String?
+  alternativePostcode   String?
+  alternativeCountry    String?
+
+  // support & disclosure
+  hasDisabilitySupportNeed   Boolean @default(false)
+  disabilitySupportCategory  String?
+  hasCriminalConviction      Boolean @default(false)
+  criminalConvictionDetails  String?
+  hasPendingLegalProceedings Boolean @default(false)
+  pendingLegalProceedingsDetails String?
 
   // academic info
-  currentSchool    String?
-  nceaLevel        String?
+  currentSchool             String?
+  nceaLevel                 String?
+  hasCompletedTertiaryStudy Boolean @default(false)
+  nationalStudentNumber     String?
+
+  // prerequisites & GPA
+  gpaScore          Float?
+  prerequisitesMet  Boolean @default(false)
+  prerequisiteNotes String?
+
+  // English proficiency
+  englishProficiencyStatus  EnglishProficiencyStatus?
+  ieltsTestDate             DateTime?
+  englishProficiencyDetails String?
+
+  // academic integrity
+  hasPriorAcademicIssues   Boolean @default(false)
+  priorAcademicIssuesDetails String?
+  hasPriorComplaints       Boolean @default(false)
+  priorComplaintsDetails   String?
+  hasDishonestyAllegations Boolean @default(false)
+  dishonestyAllegationsDetails String?
+
+  // personal statement & referral
+  personalStatement String?
+  referralSource    ReferralSource?
+
+  // declaration
+  declarationAcceptedAt    DateTime?
+  declarationSignatureName String?
 
   // emergency contact
   guardianName     String?
@@ -275,17 +445,26 @@ model Application {
   guardianPhone    String?
   guardianRelation String?
 
-  submittedAt      DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  submittedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  stageHistory           ApplicationStageHistory[]
-  tasks                  Task[]
-  documents              Document[]
-  messageThread          MessageThread?
-  timelineEvents         TimelineEvent[]
+  stageHistory            ApplicationStageHistory[]
+  tasks                   Task[]
+  documents               Document[]
+  messageThread           MessageThread?
+  mailThreads             MailThread[]
+  timelineEvents          TimelineEvent[]
   internationalCompliance InternationalCompliance?
-  staffTasks             StaffTask[]
+  staffTasks              StaffTask[]
+  offers                  Offer[]
+  notes                   Note[]
+  auditLogs               AuditLog[]
+  educationHistory        EducationHistoryEntry[]
+  chiropracticExperience  ChiropracticExperienceEntry[]
+  interviewReview         InterviewReview?
+  essayReview             EssayReview?
+  committeeDecision       CommitteeDecision?
 
   @@index([intakeYearId])
   @@index([currentStage])
@@ -294,19 +473,107 @@ model Application {
 }
 
 // ─────────────────────────────────────────────
+// EDUCATION HISTORY
+// ─────────────────────────────────────────────
+
+model EducationHistoryEntry {
+  id              String         @id @default(cuid())
+  applicationId   String
+  application     Application    @relation(fields: [applicationId], references: [id])
+  level           EducationLevel
+  institutionName String
+  country         String
+  yearStarted     Int
+  qualification   String?
+  yearCompleted   Int?
+  createdAt       DateTime       @default(now())
+
+  @@index([applicationId])
+}
+
+// ─────────────────────────────────────────────
+// CHIROPRACTIC EXPERIENCE
+// ─────────────────────────────────────────────
+
+model ChiropracticExperienceEntry {
+  id               String                       @id @default(cuid())
+  applicationId    String
+  application      Application                  @relation(fields: [applicationId], references: [id])
+  date             DateTime?
+  chiropractorName String
+  status           ChiropracticExperienceStatus
+  createdAt        DateTime                     @default(now())
+
+  @@index([applicationId])
+}
+
+// ─────────────────────────────────────────────
+// INTERVIEW REVIEW
+// ─────────────────────────────────────────────
+
+model InterviewReview {
+  id            String           @id @default(cuid())
+  applicationId String           @unique
+  application   Application      @relation(fields: [applicationId], references: [id])
+  score         Int?
+  notes         String?
+  interviewDate DateTime?
+  format        InterviewFormat?
+  reviewedById  String?
+  reviewedBy    User?            @relation("InterviewReviewedBy", fields: [reviewedById], references: [id])
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+// ─────────────────────────────────────────────
+// ESSAY REVIEW
+// ─────────────────────────────────────────────
+
+model EssayReview {
+  id            String      @id @default(cuid())
+  applicationId String      @unique
+  application   Application @relation(fields: [applicationId], references: [id])
+  score         Int?
+  notes         String?
+  reviewedById  String?
+  reviewedBy    User?       @relation("EssayReviewedBy", fields: [reviewedById], references: [id])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+// ─────────────────────────────────────────────
+// COMMITTEE DECISION
+// ─────────────────────────────────────────────
+
+model CommitteeDecision {
+  id            String                @id @default(cuid())
+  applicationId String                @unique
+  application   Application           @relation(fields: [applicationId], references: [id])
+  decision      CommitteeDecisionType
+  notes         String?
+  deferReason   String?
+  deferUntil    DateTime?
+  decidedById   String
+  decidedBy     User                  @relation("CommitteeDecisionDecidedBy", fields: [decidedById], references: [id])
+  decidedAt     DateTime              @default(now())
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+}
+
+// ─────────────────────────────────────────────
 // INTERNATIONAL COMPLIANCE
 // ─────────────────────────────────────────────
 
 model InternationalCompliance {
-  id                   String          @id @default(cuid())
-  applicationId        String          @unique
-  application          Application     @relation(fields: [applicationId], references: [id])
-  offerOfPlaceIssued   Boolean         @default(false)
-  visaStatus           VisaStatus      @default(NOT_YET)
+  id                    String          @id @default(cuid())
+  applicationId         String          @unique
+  application           Application     @relation(fields: [applicationId], references: [id])
+  offerOfPlaceIssued    Boolean         @default(false)
+  visaStatus            VisaStatus      @default(NOT_YET)
   healthInsuranceStatus InsuranceStatus @default(NOT_YET)
-  ieltsStatus          IeltsStatus     @default(NOT_YET)
-  notes                String?
-  updatedAt            DateTime        @updatedAt
+  ieltsStatus           IeltsStatus     @default(NOT_YET)
+  notes                 String?
+  updatedAt             DateTime        @updatedAt
 }
 
 // ─────────────────────────────────────────────
@@ -314,15 +581,15 @@ model InternationalCompliance {
 // ─────────────────────────────────────────────
 
 model ApplicationStageHistory {
-  id            String              @id @default(cuid())
+  id            String               @id @default(cuid())
   applicationId String
-  application   Application         @relation(fields: [applicationId], references: [id])
+  application   Application          @relation(fields: [applicationId], references: [id])
   fromStage     ApplicationStageKey?
   toStage       ApplicationStageKey
   advancedById  String
-  advancedBy    User                @relation("StageAdvancedBy", fields: [advancedById], references: [id])
+  advancedBy    User                 @relation("StageAdvancedBy", fields: [advancedById], references: [id])
   notes         String?
-  createdAt     DateTime            @default(now())
+  createdAt     DateTime             @default(now())
 
   @@index([applicationId])
 }
@@ -332,21 +599,21 @@ model ApplicationStageHistory {
 // ─────────────────────────────────────────────
 
 model TaskTemplate {
-  id                   String              @id @default(cuid())
-  stageKey             ApplicationStageKey
-  title                String
-  description          String
-  audience             TaskAudience        @default(STAFF)
-  dueDays              Int?
-  requiresDocument     Boolean             @default(false)
-  documentInstructions String?
+  id                       String                   @id @default(cuid())
+  stageKey                 ApplicationStageKey
+  title                    String
+  description              String
+  audience                 TaskAudience             @default(STAFF)
+  dueDays                  Int?
+  requiresDocument         Boolean                  @default(false)
+  documentInstructions     String?
   requiredDocumentCategory RequiredDocumentCategory @default(ANY)
-  sortOrder            Int                 @default(0)
-  isActive             Boolean             @default(true)
-  createdById          String?
-  createdBy            User?               @relation("TaskTemplateCreatedBy", fields: [createdById], references: [id])
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
+  sortOrder                Int                      @default(0)
+  isActive                 Boolean                  @default(true)
+  createdById              String?
+  createdBy                User?                    @relation("TaskTemplateCreatedBy", fields: [createdById], references: [id])
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
 
   tasks Task[]
 
@@ -358,38 +625,38 @@ model TaskTemplate {
 // ─────────────────────────────────────────────
 
 model Task {
-  id                   String        @id @default(cuid())
-  applicationId        String
-  application          Application   @relation(fields: [applicationId], references: [id])
-  title                String
-  description          String
-  status               TaskStatus    @default(PENDING)
-  audience             TaskAudience  @default(STUDENT)
-  dueDate              DateTime?
-  isRequired           Boolean       @default(true)
-  requiresDocument     Boolean       @default(false)
-  documentInstructions String?
+  id                       String                   @id @default(cuid())
+  applicationId            String
+  application              Application              @relation(fields: [applicationId], references: [id])
+  title                    String
+  description              String
+  status                   TaskStatus               @default(PENDING)
+  audience                 TaskAudience             @default(STUDENT)
+  dueDate                  DateTime?
+  isRequired               Boolean                  @default(true)
+  requiresDocument         Boolean                  @default(false)
+  documentInstructions     String?
   requiredDocumentCategory RequiredDocumentCategory @default(ANY)
-  assignedById         String
-  assignedBy           User          @relation("TaskAssignedBy", fields: [assignedById], references: [id])
-  assignedToId         String?
-  assignedTo           User?         @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
-  templateId           String?
-  template             TaskTemplate? @relation(fields: [templateId], references: [id])
-  stageKey             ApplicationStageKey?
-  completedAt          DateTime?
-  studentNote          String?
-  reviewedAt           DateTime?
-  reviewNote           String?
-  reviewedById         String?
-  reviewedBy           User?         @relation("TaskReviewedBy", fields: [reviewedById], references: [id])
-  acknowledgedAt       DateTime?
-  acknowledgedById     String?
-  acknowledgedBy       User?         @relation("TaskAcknowledgedBy", fields: [acknowledgedById], references: [id])
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime      @updatedAt
+  assignedById             String
+  assignedBy               User                     @relation("TaskAssignedBy", fields: [assignedById], references: [id])
+  assignedToId             String?
+  assignedTo               User?                    @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
+  templateId               String?
+  template                 TaskTemplate?            @relation(fields: [templateId], references: [id])
+  stageKey                 ApplicationStageKey?
+  completedAt              DateTime?
+  studentNote              String?
+  reviewedAt               DateTime?
+  reviewNote               String?
+  reviewedById             String?
+  reviewedBy               User?                    @relation("TaskReviewedBy", fields: [reviewedById], references: [id])
+  acknowledgedAt           DateTime?
+  acknowledgedById         String?
+  acknowledgedBy           User?                    @relation("TaskAcknowledgedBy", fields: [acknowledgedById], references: [id])
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
 
-  documents    Document[]
+  documents Document[]
 
   @@index([applicationId])
   @@index([status])
@@ -430,30 +697,121 @@ model StaffTask {
 // ─────────────────────────────────────────────
 
 model Document {
-  id               String         @id @default(cuid())
+  id               String          @id @default(cuid())
   applicationId    String
-  application      Application    @relation(fields: [applicationId], references: [id])
+  application      Application     @relation(fields: [applicationId], references: [id])
   taskId           String?
-  task             Task?          @relation(fields: [taskId], references: [id])
+  task             Task?           @relation(fields: [taskId], references: [id])
+  offerConditionId String?
+  offerCondition   OfferCondition? @relation(fields: [offerConditionId], references: [id])
   filename         String
   storedFilename   String
   mimeType         String
   sizeBytes        Int
   storageKey       String
-  storageProvider  String         @default("local")
+  storageProvider  String          @default("local")
   documentType     String
   description      String?
-  status           DocumentStatus @default(PENDING_REVIEW)
+  status           DocumentStatus  @default(PENDING_REVIEW)
   verifiedById     String?
-  verifiedBy       User?          @relation("DocumentVerifiedBy", fields: [verifiedById], references: [id])
+  verifiedBy       User?           @relation("DocumentVerifiedBy", fields: [verifiedById], references: [id])
   verifiedAt       DateTime?
   verificationNote String?
-  uploadedAt       DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  uploadedAt       DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
   @@index([applicationId])
   @@index([taskId])
+  @@index([offerConditionId])
   @@index([status])
+}
+
+// ─────────────────────────────────────────────
+// OFFER + OFFER CONDITION
+// ─────────────────────────────────────────────
+
+model Offer {
+  id                   String              @id @default(cuid())
+  applicationId        String
+  application          Application         @relation(fields: [applicationId], references: [id])
+  type                 OfferType
+  issuedById           String
+  issuedBy             User                @relation("OfferIssuedBy", fields: [issuedById], references: [id])
+  issuedAt             DateTime            @default(now())
+  acceptanceDeadline   DateTime?
+  responseStatus       OfferResponseStatus @default(PENDING)
+  respondedAt          DateTime?
+  offerLetterReference String?
+  notes                String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  conditions OfferCondition[]
+
+  @@index([applicationId])
+  @@index([responseStatus])
+}
+
+model OfferCondition {
+  id            String               @id @default(cuid())
+  offerId       String
+  offer         Offer                @relation(fields: [offerId], references: [id])
+  conditionText String
+  isStandard    Boolean              @default(true)
+  status        OfferConditionStatus @default(PENDING)
+  satisfiedAt   DateTime?
+  satisfiedById String?
+  satisfiedBy   User?                @relation("OfferConditionSatisfiedBy", fields: [satisfiedById], references: [id])
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  evidenceDocuments Document[]
+
+  @@index([offerId])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────
+// NOTE (staff-only internal notes)
+// ─────────────────────────────────────────────
+
+model Note {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id])
+  body          String
+  authorId      String
+  author        User        @relation("NoteAuthor", fields: [authorId], references: [id])
+  createdAt     DateTime    @default(now())
+
+  @@index([applicationId])
+}
+
+// ─────────────────────────────────────────────
+// AUDIT LOG (generic "who changed what, when")
+// ─────────────────────────────────────────────
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+model AuditLog {
+  id            String       @id @default(cuid())
+  applicationId String?
+  application   Application? @relation(fields: [applicationId], references: [id])
+  objectType    String
+  objectId      String
+  action        AuditAction
+  actionDetail  String
+  userId        String?
+  user          User?        @relation("AuditLogUser", fields: [userId], references: [id])
+  createdAt     DateTime     @default(now())
+
+  @@index([applicationId])
+  @@index([objectType, objectId])
+  @@index([createdAt])
 }
 
 // ─────────────────────────────────────────────
@@ -471,16 +829,16 @@ model MessageThread {
 }
 
 model Message {
-  id            String            @id @default(cuid())
-  threadId      String
-  thread        MessageThread     @relation(fields: [threadId], references: [id])
-  senderRole    MessageSenderRole
-  senderId      String
-  sender        User              @relation(fields: [senderId], references: [id])
-  body          String
-  isRead        Boolean           @default(false)
-  readAt        DateTime?
-  sentAt        DateTime          @default(now())
+  id         String            @id @default(cuid())
+  threadId   String
+  thread     MessageThread     @relation(fields: [threadId], references: [id])
+  senderRole MessageSenderRole
+  senderId   String
+  sender     User              @relation(fields: [senderId], references: [id])
+  body       String
+  isRead     Boolean           @default(false)
+  readAt     DateTime?
+  sentAt     DateTime          @default(now())
 
   @@index([threadId])
   @@index([isRead])
@@ -491,19 +849,19 @@ model Message {
 // ─────────────────────────────────────────────
 
 model TimelineEvent {
-  id                 String              @id @default(cuid())
+  id                 String               @id @default(cuid())
   applicationId      String
-  application        Application         @relation(fields: [applicationId], references: [id])
+  application        Application          @relation(fields: [applicationId], references: [id])
   eventType          TimelineEventType
   title              String
   description        String?
-  isVisibleToStudent Boolean             @default(true)
+  isVisibleToStudent Boolean              @default(true)
   relatedTaskId      String?
   relatedDocumentId  String?
   relatedStageKey    ApplicationStageKey?
-  occurredAt         DateTime            @default(now())
+  occurredAt         DateTime             @default(now())
   createdById        String?
-  createdBy          User?               @relation("TimelineEventCreatedBy", fields: [createdById], references: [id])
+  createdBy          User?                @relation("TimelineEventCreatedBy", fields: [createdById], references: [id])
 
   @@index([applicationId])
   @@index([occurredAt])
@@ -514,14 +872,64 @@ model TimelineEvent {
 // ─────────────────────────────────────────────
 
 model StaffPermission {
-  id          String        @id @default(cuid())
-  staffUserId String
-  staffUser   User          @relation(fields: [staffUserId], references: [id])
+  id            String        @id @default(cuid())
+  staffUserId   String
+  staffUser     User          @relation(fields: [staffUserId], references: [id])
   permissionKey PermissionKey
-  granted     Boolean       @default(false)
-  grantedById String?
-  updatedAt   DateTime      @updatedAt
+  granted       Boolean       @default(false)
+  grantedById   String?
+  updatedAt     DateTime      @updatedAt
 
   @@unique([staffUserId, permissionKey])
   @@index([staffUserId])
+}
+
+// ─────────────────────────────────────────────
+// APPLICATION ERROR LOG
+// ─────────────────────────────────────────────
+
+model ApplicationErrorLog {
+  id        String   @id @default(cuid())
+  source    String
+  message   String
+  stack     String?
+  email     String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────
+// MAIL THREAD + MAIL MESSAGE
+// (Trial: subject-based, multi-thread messaging, alongside the existing
+// single-thread SMS-style MessageThread/Message system above.)
+// ─────────────────────────────────────────────
+
+model MailThread {
+  id            String        @id @default(cuid())
+  applicationId String
+  application   Application   @relation(fields: [applicationId], references: [id])
+  subject       String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  messages MailMessage[]
+
+  @@index([applicationId])
+}
+
+model MailMessage {
+  id         String            @id @default(cuid())
+  threadId   String
+  thread     MailThread        @relation(fields: [threadId], references: [id])
+  senderRole MessageSenderRole
+  senderId   String
+  sender     User              @relation(fields: [senderId], references: [id])
+  body       String
+  isRead     Boolean           @default(false)
+  readAt     DateTime?
+  sentAt     DateTime          @default(now())
+
+  @@index([threadId])
+  @@index([isRead])
 }

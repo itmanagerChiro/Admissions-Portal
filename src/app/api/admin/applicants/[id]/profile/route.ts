@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissionGuard } from "@/lib/permissions";
+import { logAudit } from "@/lib/audit";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -13,7 +14,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const {
     firstName, lastName, phone, city, address, postcode, country,
-    guardianName, guardianEmail, guardianPhone,
+    guardianName, guardianEmail, guardianPhone, flagNote, flagColor, gpaScore, prerequisitesMet,
   } = body;
 
   const app = await prisma.application.findUnique({
@@ -41,9 +42,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         ...(guardianName !== undefined && { guardianName }),
         ...(guardianEmail !== undefined && { guardianEmail }),
         ...(guardianPhone !== undefined && { guardianPhone }),
+        ...(flagNote !== undefined && { flagNote: flagNote || null }),
+        ...(flagColor !== undefined && { flagColor: flagColor || null }),
+        ...(gpaScore !== undefined && { gpaScore: gpaScore === null || gpaScore === "" ? null : parseFloat(gpaScore) }),
+        ...(prerequisitesMet !== undefined && { prerequisitesMet: !!prerequisitesMet }),
       },
     }),
   ]);
+
+  const changedFields = Object.keys(body).filter((k) => body[k] !== undefined);
+  await logAudit({
+    applicationId: id,
+    objectType: "Application",
+    objectId: id,
+    action: "UPDATE",
+    actionDetail: `Staff updated profile fields: ${changedFields.join(", ")}`,
+    userId: session!.user.id,
+  });
 
   return NextResponse.json({ success: true });
 }

@@ -64,6 +64,14 @@ function MailIcon() {
   );
 }
 
+function GiftIcon() {
+  return (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20 12v9H4v-9M2 7h20v5H2V7zm10 0v14M12 7C10.5 4 6 4 6 7s4 2 6 0zm0 0c1.5-3 6-3 6 0s-4 2-6 0z" />
+    </svg>
+  );
+}
+
 function UserIcon() {
   return (
     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
@@ -119,12 +127,14 @@ export function StudentSidebar({ firstName, lastName, pendingTaskCount, unreadMe
         { label: "My Tasks", href: "/tasks", icon: <CheckIcon />, badge: pendingTaskCount || undefined },
         { label: "Documents", href: "/documents", icon: <FolderIcon /> },
         { label: "Timeline", href: "/timeline", icon: <ClockIcon /> },
+        { label: "My Offer", href: "/offer", icon: <GiftIcon /> },
       ],
     },
     {
       title: "Communication",
       items: [
         { label: "Messages", href: "/messages", icon: <MailIcon />, badge: unreadMessageCount || undefined },
+        { label: "Threads (Trial)", href: "/mail-threads", icon: <MailIcon /> },
       ],
     },
     {

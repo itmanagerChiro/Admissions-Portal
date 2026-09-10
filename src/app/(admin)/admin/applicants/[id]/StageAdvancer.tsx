@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import { STAGE_LABELS, STAGE_ORDER } from "@/lib/stages";
+import { STAGE_LABELS, STAGE_STATUS_LABELS, STAGE_ORDER } from "@/lib/stages";
 import type { ApplicationStageKey, TaskStatus, TaskAudience } from "@/generated/prisma/client";
 
 interface StageAdvancerProps {
@@ -117,7 +117,7 @@ export function StageAdvancer({ applicationId, currentStage }: StageAdvancerProp
           className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg transition-opacity hover:opacity-90"
           style={{ backgroundColor: "#114E3B", color: "#ffffff", boxShadow: "0 2px 8px rgba(17,78,59,0.35)" }}
         >
-          {STAGE_LABELS[currentStage]}
+          {STAGE_STATUS_LABELS[currentStage]}
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d={isMenuOpen ? "M19 15l-7-7-7 7" : "M19 9l-7 7-7-7"} />
           </svg>

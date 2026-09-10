@@ -1,12 +1,15 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { CATEGORY_ACCEPT } from "@/lib/documentValidation";
+import type { RequiredDocumentCategory } from "@/generated/prisma/client";
 
 interface PendingTask {
   id: string;
   title: string;
+  requiredDocumentCategory: RequiredDocumentCategory;
 }
 
 interface DocumentUploadFormProps {
@@ -22,6 +25,10 @@ export function DocumentUploadForm({ applicationId, pendingTasks }: DocumentUplo
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const selectedTask = pendingTasks.find((t) => t.id === taskId);
+  const category: RequiredDocumentCategory = selectedTask?.requiredDocumentCategory ?? "DOCUMENT";
+  const acceptAttr = useMemo(() => CATEGORY_ACCEPT[category], [category]);
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
@@ -65,7 +72,7 @@ export function DocumentUploadForm({ applicationId, pendingTasks }: DocumentUplo
           backgroundColor: isDragging ? "rgba(17,78,59,0.04)" : "#F8F8F6",
         }}
       >
-        <input type="file" id="doc-upload" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" />
+        <input type="file" id="doc-upload" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} accept={acceptAttr} />
         <label htmlFor="doc-upload" className="cursor-pointer flex flex-col items-center gap-2">
           <svg className="w-8 h-8 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -73,9 +80,11 @@ export function DocumentUploadForm({ applicationId, pendingTasks }: DocumentUplo
           {file ? (
             <span className="text-sm font-medium text-text">{file.name}</span>
           ) : (
-            <span className="text-sm text-text-muted">Upload Admissions Essay</span>
+            <span className="text-sm text-text-muted">Upload a document</span>
           )}
-          <span className="text-xs text-text-light">PDF or Word document · Max 5MB</span>
+          <span className="text-xs text-text-light">
+            {category === "IMAGE" ? "Image file" : category === "ANY" ? "Any file type" : "PDF or Word document"} · Max 10MB
+          </span>
         </label>
       </div>
 

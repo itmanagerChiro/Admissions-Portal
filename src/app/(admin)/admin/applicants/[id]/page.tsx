@@ -3,13 +3,20 @@ import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requirePermission, hasPermission } from "@/lib/permissions";
 import { Badge } from "@/components/ui/Badge";
-import { STAGE_LABELS, STAGE_ORDER } from "@/lib/stages";
+import { STAGE_STATUS_LABELS, STAGE_DISPLAY_STEPS, STAGE_ORDER, stageDisplayIndex } from "@/lib/stages";
 import { StageAdvancer } from "./StageAdvancer";
 import { SendReminderButton } from "./SendReminderButton";
 import { EditApplicantForm } from "./EditApplicantForm";
 import { MessagesChatWidget } from "./MessagesChatWidget";
+import { MailThreadsPanel } from "@/components/shared/MailThreadsPanel";
 import { TaskCompleteCheckbox } from "./TaskCompleteCheckbox";
 import { DocumentVerifyButtons } from "./documents/DocumentVerifyButtons";
+import { OfferPanel } from "./OfferPanel";
+import { NotesPanel } from "./NotesPanel";
+import { InterviewReviewPanel } from "./InterviewReviewPanel";
+import { EssayReviewPanel } from "./EssayReviewPanel";
+import { FlagEditor } from "./FlagEditor";
+import { DeleteAccountPanel } from "./DeleteAccountPanel";
 import Link from "next/link";
 import type { ApplicationStageKey } from "@/generated/prisma/client";
 
@@ -17,9 +24,12 @@ const STAGE_VARIANTS: Record<ApplicationStageKey, "muted" | "blue" | "gold" | "r
   NEW_SUBMITTED: "muted",
   INTAKE_REVIEW: "blue",
   ACADEMIC_CHECK: "gold",
-  INTERVIEW_AND_ESSAY: "blue",
+  INTERVIEW: "blue",
+  ESSAY: "blue",
   COMMITTEE: "red",
-  OFFERED: "gold",
+  OFFER_CONDITIONAL: "gold",
+  OFFER_UNCONDITIONAL: "gold",
+  ACCEPTED: "green",
   ENROLLED: "olive",
 };
 
@@ -40,6 +50,17 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
         include: { messages: { orderBy: { sentAt: "asc" } } },
       },
       timelineEvents: { orderBy: { occurredAt: "desc" }, take: 5 },
+      offers: {
+        orderBy: { issuedAt: "desc" },
+        include: { conditions: true },
+      },
+      notes: {
+        orderBy: { createdAt: "desc" },
+        include: { author: { select: { firstName: true, lastName: true } } },
+      },
+      interviewReview: true,
+      essayReview: true,
+      chiropracticExperience: { orderBy: { date: "desc" } },
     },
   });
 
@@ -52,8 +73,12 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
   const canVerifyDocs = hasPermission(session, "VERIFY_DOCUMENTS");
   const canRemindTasks = hasPermission(session, "REMIND_TASK");
   const canEditProfile = hasPermission(session, "EDIT_APPLICANT_PROFILE");
+  const canWithdraw = hasPermission(session, "WITHDRAW_APPLICATION");
 
-  const currentIndex = STAGE_ORDER.indexOf(app.currentStage);
+  const currentIndex = stageDisplayIndex(app.currentStage);
+  const rawStageIndex = STAGE_ORDER.indexOf(app.currentStage);
+  const showInterview = rawStageIndex >= STAGE_ORDER.indexOf("INTERVIEW");
+  const showEssay = rawStageIndex >= STAGE_ORDER.indexOf("ESSAY");
 
   return (
     <div className="px-8 py-7 max-w-4xl">
@@ -63,15 +88,21 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
       </Link>
 
       {/* Header */}
-      <div className="flex items-start justify-between mt-4 mb-6">
+      <div className="flex items-start justify-between mb-6">
         <div>
           <div className="flex items-center gap-3 mb-1">
             <h1 className="font-serif text-3xl text-text">
               {app.student.firstName} {app.student.lastName}
             </h1>
             <Badge variant={STAGE_VARIANTS[app.currentStage]}>
-              {STAGE_LABELS[app.currentStage]}
+              {STAGE_STATUS_LABELS[app.currentStage]}
             </Badge>
+            <FlagEditor
+              applicationId={id}
+              flagNote={app.flagNote}
+              flagColor={app.flagColor}
+              canEdit={canEditProfile}
+            />
           </div>
           <div className="flex items-center gap-2 text-xs" style={{ color: "#666" }}>
             <span className="font-mono">{app.applicantNumber}</span>
@@ -81,16 +112,9 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
             <span>Year {app.yearLevel === "YEAR_1" ? "1" : "2"}</span>
             <span>·</span>
             <span>{app.intakeYear.label}</span>
-            {app.flagNote && (
-              <>
-                <span>·</span>
-                <span className="font-semibold" style={{ color: "#c0392b" }}>{app.flagNote}</span>
-              </>
-            )}
           </div>
         </div>
         <div className="flex items-start gap-3">
-          {canRemindTasks && <SendReminderButton applicationId={app.id} />}
           {canAdvance && (
             <StageAdvancer
               applicationId={app.id}
@@ -100,14 +124,34 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
         </div>
       </div>
 
+      {/* Sub-page nav */}
+      <div className="flex items-center gap-2 mb-6">
+        {[
+          { href: `/admin/applicants/${id}/tasks`, label: "Tasks" },
+          ...(canViewDocs ? [{ href: `/admin/applicants/${id}/documents`, label: "Documents" }] : []),
+          { href: `/admin/applicants/${id}/timeline`, label: "Audit Log" },
+          { href: `/admin/applicants/${id}/consideration`, label: "Consideration Summary" },
+        ].map(({ href, label }) => (
+          <Link
+            key={href}
+            href={href}
+            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-white shadow-sm"
+            style={{ color: "#555" }}
+          >
+            {label}
+          </Link>
+        ))}
+        {canRemindTasks && <SendReminderButton applicationId={app.id} />}
+      </div>
+
       {/* Stage progress bar */}
       <div className="mb-6 bg-white rounded-2xl shadow-sm px-5 py-4">
         <div className="flex items-center justify-between mb-3">
-          {STAGE_ORDER.map((stage, i) => {
+          {STAGE_DISPLAY_STEPS.map((step, i) => {
             const isComplete = i < currentIndex;
             const isCurrent = i === currentIndex;
             return (
-              <div key={stage} className="flex items-center flex-1">
+              <div key={step.key} className="flex items-center flex-1">
                 <div className="flex flex-col items-center flex-shrink-0">
                   <div
                     className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
@@ -125,7 +169,7 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
                     )}
                   </div>
                 </div>
-                {i < STAGE_ORDER.length - 1 && (
+                {i < STAGE_DISPLAY_STEPS.length - 1 && (
                   <div
                     className="flex-1 h-0.5 mx-1"
                     style={{ backgroundColor: isComplete ? "#114E3B" : "rgba(0,0,0,0.08)" }}
@@ -136,15 +180,15 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
           })}
         </div>
         <div className="flex items-center justify-between mt-1">
-          {STAGE_ORDER.map((stage, i) => {
+          {STAGE_DISPLAY_STEPS.map((step, i) => {
             const isCurrent = i === currentIndex;
             return (
-              <div key={stage} className="flex-1 text-center" style={{ minWidth: 0 }}>
+              <div key={step.key} className="flex-1 text-center" style={{ minWidth: 0 }}>
                 <span
                   className="text-[9px] font-semibold uppercase tracking-wide leading-tight block truncate px-0.5"
                   style={{ color: isCurrent ? "#C79A3B" : i < currentIndex ? "#114E3B" : "#bbb" }}
                 >
-                  {STAGE_LABELS[stage]}
+                  {step.label}
                 </span>
               </div>
             );
@@ -154,6 +198,15 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
 
       {/* Detail grid */}
       <div className="grid grid-cols-2 gap-5">
+        {/* Notes */}
+        <div className="col-span-2">
+          <NotesPanel
+            applicationId={id}
+            notes={app.notes.map((n) => ({ ...n, createdAt: n.createdAt.toISOString() }))}
+            canAdd={canEditProfile}
+          />
+        </div>
+
         {/* Application Details */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: "1px solid rgba(0,0,0,0.06)", backgroundColor: "#F8F8F6" }}>
@@ -173,6 +226,8 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
                   guardianName: app.guardianName ?? "",
                   guardianEmail: app.guardianEmail ?? "",
                   guardianPhone: app.guardianPhone ?? "",
+                  gpaScore: app.gpaScore?.toString() ?? "",
+                  prerequisitesMet: app.prerequisitesMet,
                 }}
               />
             )}
@@ -184,6 +239,9 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
               ["City", app.city ?? "—"],
               ["Submitted", app.submittedAt ? new Date(app.submittedAt).toLocaleDateString("en-NZ") : "—"],
               ["Guardian", app.guardianName ?? "—"],
+              ["GPA", app.gpaScore?.toString() ?? "—"],
+              ["Chiropractor reference", app.chiropracticExperience[0]?.chiropractorName ?? "—"],
+              ["Prerequisites met", app.prerequisitesMet ? "Yes" : "No"],
             ].map(([k, v], i, arr) => (
               <div key={k} className="flex justify-between px-5 py-3 text-sm" style={{ borderBottom: i < arr.length - 1 ? "1px solid rgba(0,0,0,0.05)" : "none" }}>
                 <dt style={{ color: "#666" }}>{k}</dt>
@@ -236,7 +294,15 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
             ) : (
               app.documents.map((doc, i) => (
                 <div key={doc.id} className="flex items-center justify-between gap-3 px-5 py-3 text-xs" style={{ borderBottom: i < app.documents.length - 1 ? "1px solid rgba(0,0,0,0.05)" : "none" }}>
-                  <span className="truncate max-w-[45%]" style={{ color: "#333" }}>{doc.filename}</span>
+                  <a
+                    href={`/api/files/${doc.storageKey}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="truncate max-w-[45%] hover:underline"
+                    style={{ color: "#114E3B" }}
+                  >
+                    {doc.filename}
+                  </a>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {canVerifyDocs && doc.status === "PENDING_REVIEW" ? (
                       <DocumentVerifyButtons documentId={doc.id} applicationId={id} />
@@ -250,6 +316,37 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
               ))
             )}
           </div>
+        )}
+
+        {/* Offer */}
+        <OfferPanel
+          applicationId={id}
+          offers={app.offers.map((o) => ({
+            ...o,
+            issuedAt: o.issuedAt.toISOString(),
+            acceptanceDeadline: o.acceptanceDeadline ? o.acceptanceDeadline.toISOString() : null,
+          }))}
+          canManage={canAdvance}
+          depositStatus={app.depositStatus}
+          depositMethod={app.depositMethod}
+        />
+
+        {/* Interview Review */}
+        {showInterview && (
+          <InterviewReviewPanel
+            applicationId={id}
+            review={
+              app.interviewReview
+                ? { ...app.interviewReview, interviewDate: app.interviewReview.interviewDate?.toISOString() ?? null }
+                : null
+            }
+            canEdit={canAdvance}
+          />
+        )}
+
+        {/* Essay Review */}
+        {showEssay && (
+          <EssayReviewPanel applicationId={id} review={app.essayReview} canEdit={canAdvance} />
         )}
 
       </div>
@@ -266,22 +363,31 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
         </div>
       )}
 
-      {/* Sub-page nav */}
-      <div className="flex gap-2 mt-6">
-        {[
-          { href: `/admin/applicants/${id}/tasks`, label: "Tasks" },
-          ...(canViewDocs ? [{ href: `/admin/applicants/${id}/documents`, label: "Documents" }] : []),
-          { href: `/admin/applicants/${id}/timeline`, label: "Timeline" },
-        ].map(({ href, label }) => (
-          <Link
-            key={href}
-            href={href}
-            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-white shadow-sm"
-            style={{ color: "#555" }}
-          >
-            {label}
-          </Link>
-        ))}
+      {/* Threads (Trial) */}
+      {canSendMessages && (
+        <div className="mt-5">
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "#555" }}>Threads</p>
+            <span className="text-[9px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(199,154,59,0.15)", color: "#8a6416" }}>
+              Trial
+            </span>
+          </div>
+          <MailThreadsPanel
+            baseUrl={`/api/admin/applicants/${id}/mail-threads`}
+            viewerRole="STAFF"
+            composerLabel={`Message ${app.student.firstName}…`}
+          />
+        </div>
+      )}
+
+      {/* Account deletion */}
+      <div className="mt-6">
+        <DeleteAccountPanel
+          studentUserId={app.student.id}
+          studentName={`${app.student.firstName} ${app.student.lastName}`}
+          deletionRequestedAt={app.student.deletionRequestedAt ? app.student.deletionRequestedAt.toISOString() : null}
+          canDelete={canWithdraw}
+        />
       </div>
     </div>
   );

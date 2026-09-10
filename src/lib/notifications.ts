@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { sendTemplatedEmail, buildAppUrl } from "@/lib/email";
-import { STAGE_LABELS } from "@/lib/stages";
-import type { ApplicationStageKey } from "@/generated/prisma/client";
+import { STAGE_STATUS_LABELS } from "@/lib/stages";
+import type { ApplicationStageKey, OfferType } from "@/generated/prisma/client";
 
 async function isEmailNotificationsEnabled(): Promise<boolean> {
   const row = await prisma.appSettings.findUnique({ where: { id: "singleton" } });
@@ -60,7 +60,7 @@ export async function notifyStudentOfStageChange(
 
     await sendTemplatedEmail("STAGE_CHANGE_NOTIFICATION", application.student.email, {
       firstName: application.student.firstName,
-      stageName: STAGE_LABELS[newStage],
+      stageName: STAGE_STATUS_LABELS[newStage],
       portalUrl: buildAppUrl("/dashboard"),
     });
   } catch (err) {
@@ -71,13 +71,13 @@ export async function notifyStudentOfStageChange(
 export async function notifyStudentTaskReminder(
   applicationId: string
 ): Promise<{ sent: boolean; taskCount: number }> {
-  try {
-    const tasks = await prisma.task.findMany({
-      where: { applicationId, isRequired: true, status: { not: "APPROVED" } },
-      select: { id: true, title: true },
-    });
-    if (tasks.length === 0) return { sent: false, taskCount: 0 };
+  const tasks = await prisma.task.findMany({
+    where: { applicationId, isRequired: true, status: { not: "APPROVED" } },
+    select: { id: true, title: true },
+  });
+  if (tasks.length === 0) return { sent: false, taskCount: 0 };
 
+  try {
     if (!(await isEmailNotificationsEnabled())) {
       return { sent: false, taskCount: tasks.length };
     }
@@ -97,7 +97,173 @@ export async function notifyStudentTaskReminder(
     return { sent: true, taskCount: tasks.length };
   } catch (err) {
     console.error("notifyStudentTaskReminder failed", err);
-    return { sent: false, taskCount: 0 };
+    return { sent: false, taskCount: tasks.length };
+  }
+}
+
+function formatOfferType(type: OfferType): string {
+  return type === "CONDITIONAL" ? "conditional" : "unconditional";
+}
+
+export async function notifyStudentOfApplicationDeclined(
+  applicationId: string,
+  note: string | null
+): Promise<void> {
+  try {
+    if (!(await isEmailNotificationsEnabled())) return;
+
+    const application = await prisma.application.findUnique({
+      where: { id: applicationId },
+      select: { student: { select: { email: true, firstName: true } } },
+    });
+    if (!application) return;
+
+    await sendTemplatedEmail("APPLICATION_DECLINED", application.student.email, {
+      firstName: application.student.firstName,
+      note: note ?? "",
+    });
+  } catch (err) {
+    console.error("notifyStudentOfApplicationDeclined failed", err);
+  }
+}
+
+export async function notifyStudentOfOffer(
+  applicationId: string,
+  offerType: OfferType,
+  acceptanceDeadline: Date | null
+): Promise<void> {
+  try {
+    if (!(await isEmailNotificationsEnabled())) return;
+
+    const application = await prisma.application.findUnique({
+      where: { id: applicationId },
+      select: { student: { select: { email: true, firstName: true } } },
+    });
+    if (!application) return;
+
+    await sendTemplatedEmail("OFFER_ISSUED", application.student.email, {
+      firstName: application.student.firstName,
+      offerType: formatOfferType(offerType),
+      deadlineText: acceptanceDeadline
+        ? `Please respond by ${acceptanceDeadline.toLocaleDateString("en-NZ")}.`
+        : "",
+      portalUrl: buildAppUrl("/offer"),
+    });
+  } catch (err) {
+    console.error("notifyStudentOfOffer failed", err);
+  }
+}
+
+export async function notifyAdminsOfOfferResponse(
+  applicationId: string,
+  offerType: OfferType,
+  accepted: boolean
+): Promise<void> {
+  try {
+    if (!(await isEmailNotificationsEnabled())) return;
+
+    const application = await prisma.application.findUnique({
+      where: { id: applicationId },
+      select: { student: { select: { firstName: true, lastName: true } } },
+    });
+    if (!application) return;
+
+    const recipients = await prisma.user.findMany({
+      where: {
+        role: "STAFF",
+        isActive: true,
+        OR: [
+          { isGlobalAdmin: true },
+          { staffPermissions: { some: { permissionKey: "ADVANCE_APPLICATION_STAGE", granted: true } } },
+        ],
+      },
+      select: { email: true },
+    });
+    if (recipients.length === 0) return;
+
+    const studentName = `${application.student.firstName} ${application.student.lastName}`;
+    const applicantUrl = buildAppUrl(`/admin/applicants/${applicationId}`);
+
+    await Promise.allSettled(
+      recipients.map((r) =>
+        sendTemplatedEmail("OFFER_RESPONSE_ADMIN", r.email, {
+          studentName,
+          responseVerb: accepted ? "accepted" : "declined",
+          offerType: formatOfferType(offerType),
+          applicantUrl,
+        })
+      )
+    );
+  } catch (err) {
+    console.error("notifyAdminsOfOfferResponse failed", err);
+  }
+}
+
+export async function notifyAdminsOfDocumentUpload(
+  applicationId: string,
+  filename: string
+): Promise<void> {
+  try {
+    if (!(await isEmailNotificationsEnabled())) return;
+
+    const application = await prisma.application.findUnique({
+      where: { id: applicationId },
+      select: { student: { select: { firstName: true, lastName: true } } },
+    });
+    if (!application) return;
+
+    const recipients = await prisma.user.findMany({
+      where: {
+        role: "STAFF",
+        isActive: true,
+        OR: [
+          { isGlobalAdmin: true },
+          { staffPermissions: { some: { permissionKey: "VERIFY_DOCUMENTS", granted: true } } },
+        ],
+      },
+      select: { email: true },
+    });
+    if (recipients.length === 0) return;
+
+    const studentName = `${application.student.firstName} ${application.student.lastName}`;
+    const applicantUrl = buildAppUrl(`/admin/applicants/${applicationId}/documents`);
+
+    await Promise.allSettled(
+      recipients.map((r) =>
+        sendTemplatedEmail("DOCUMENT_UPLOADED_ADMIN", r.email, {
+          studentName,
+          filename,
+          applicantUrl,
+        })
+      )
+    );
+  } catch (err) {
+    console.error("notifyAdminsOfDocumentUpload failed", err);
+  }
+}
+
+export async function notifyStudentOfDocumentRejection(
+  applicationId: string,
+  filename: string,
+  note: string | null
+): Promise<void> {
+  try {
+    if (!(await isEmailNotificationsEnabled())) return;
+
+    const application = await prisma.application.findUnique({
+      where: { id: applicationId },
+      select: { student: { select: { email: true, firstName: true } } },
+    });
+    if (!application) return;
+
+    await sendTemplatedEmail("DOCUMENT_REJECTED", application.student.email, {
+      firstName: application.student.firstName,
+      filename,
+      note: note ?? "",
+      portalUrl: buildAppUrl("/documents"),
+    });
+  } catch (err) {
+    console.error("notifyStudentOfDocumentRejection failed", err);
   }
 }
 
@@ -149,5 +315,97 @@ export async function notifyAdminsOfAllTasksComplete(applicationId: string): Pro
     );
   } catch (err) {
     console.error("notifyAdminsOfAllTasksComplete failed", err);
+  }
+}
+
+export async function notifyAdminsOfAccountDeletionRequest(
+  applicationId: string,
+  studentName: string,
+  studentEmail: string
+): Promise<void> {
+  try {
+    if (!(await isEmailNotificationsEnabled())) return;
+
+    const recipients = await prisma.user.findMany({
+      where: {
+        role: "STAFF",
+        isActive: true,
+        OR: [
+          { isGlobalAdmin: true },
+          { staffPermissions: { some: { permissionKey: "WITHDRAW_APPLICATION", granted: true } } },
+        ],
+      },
+      select: { email: true },
+    });
+    if (recipients.length === 0) return;
+
+    const applicantUrl = buildAppUrl(`/admin/applicants/${applicationId}`);
+
+    await Promise.allSettled(
+      recipients.map((r) =>
+        sendTemplatedEmail("ACCOUNT_DELETION_REQUESTED", r.email, {
+          studentName,
+          studentEmail,
+          applicantUrl,
+        })
+      )
+    );
+  } catch (err) {
+    console.error("notifyAdminsOfAccountDeletionRequest failed", err);
+  }
+}
+
+export async function notifyAdminsOfBankTransferSubmitted(applicationId: string): Promise<void> {
+  try {
+    if (!(await isEmailNotificationsEnabled())) return;
+
+    const application = await prisma.application.findUnique({
+      where: { id: applicationId },
+      select: { student: { select: { firstName: true, lastName: true } } },
+    });
+    if (!application) return;
+
+    const recipients = await prisma.user.findMany({
+      where: {
+        role: "STAFF",
+        isActive: true,
+        OR: [
+          { isGlobalAdmin: true },
+          { staffPermissions: { some: { permissionKey: "ADVANCE_APPLICATION_STAGE", granted: true } } },
+        ],
+      },
+      select: { email: true },
+    });
+    if (recipients.length === 0) return;
+
+    const studentName = `${application.student.firstName} ${application.student.lastName}`;
+    const applicantUrl = buildAppUrl(`/admin/applicants/${applicationId}`);
+
+    await Promise.allSettled(
+      recipients.map((r) =>
+        sendTemplatedEmail("BANK_TRANSFER_SUBMITTED_ADMIN", r.email, { studentName, applicantUrl })
+      )
+    );
+  } catch (err) {
+    console.error("notifyAdminsOfBankTransferSubmitted failed", err);
+  }
+}
+
+export async function notifyStudentOfBankTransferApproved(applicationId: string): Promise<void> {
+  try {
+    if (!(await isEmailNotificationsEnabled())) return;
+
+    const application = await prisma.application.findUnique({
+      where: { id: applicationId },
+      select: { student: { select: { email: true, firstName: true } } },
+    });
+    if (!application) return;
+
+    await sendTemplatedEmail("BANK_TRANSFER_APPROVED", application.student.email, {
+      firstName: application.student.firstName,
+      portalUrl: buildAppUrl("/offer"),
+    });
+  } catch (err) {
+    console.error("notifyStudentOfBankTransferApproved failed", err);
   }
 }

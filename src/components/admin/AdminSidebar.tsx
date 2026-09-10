@@ -1,9 +1,16 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { signOut } from "next-auth/react";
 import Image from "next/image";
+
+interface IntakeYearOption {
+  id: string;
+  label: string;
+  isActive: boolean;
+}
 
 interface AdminSidebarProps {
   isGlobalAdmin: boolean;
@@ -13,6 +20,7 @@ interface AdminSidebarProps {
   userName: string;
   isAdmin: boolean;
   activeIntakeLabel?: string;
+  intakeYears?: IntakeYearOption[];
 }
 
 
@@ -82,7 +90,84 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function AdminSidebar({ isGlobalAdmin, pendingStaffTaskCount, intlAttentionCount, unseenSubmissionCount, userName, activeIntakeLabel }: AdminSidebarProps) {
+function IntakeSwitcher({ activeIntakeLabel, intakeYears, canSwitch }: { activeIntakeLabel?: string; intakeYears: IntakeYearOption[]; canSwitch: boolean }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setIsOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  async function activate(id: string) {
+    setIsLoading(true);
+    await fetch(`/api/admin/intake-years/${id}/activate`, { method: "POST" });
+    setIsLoading(false);
+    setIsOpen(false);
+
+    // Also narrow whatever page we're currently on to this intake, so switching
+    // in the sidebar actually changes what's on screen instead of just a background flag.
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("intake", id);
+    router.push(`${pathname}?${params.toString()}`);
+    router.refresh();
+  }
+
+  return (
+    <div ref={menuRef} className="px-4 py-3 relative" style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+      <button
+        onClick={() => canSwitch && setIsOpen((v) => !v)}
+        disabled={!canSwitch}
+        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-opacity hover:opacity-90"
+        style={{ backgroundColor: "rgba(199,154,59,0.15)", border: "1px solid rgba(199,154,59,0.25)", cursor: canSwitch ? "pointer" : "default" }}
+      >
+        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: "#C79A3B" }} />
+        <div className="flex-1 text-left min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "rgba(199,154,59,0.7)" }}>Active Intake</p>
+          <p className="text-sm font-bold truncate" style={{ color: "#C79A3B" }}>{activeIntakeLabel ?? "None"}</p>
+        </div>
+        {canSwitch && (
+          <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="#C79A3B" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d={isOpen ? "M19 15l-7-7-7 7" : "M19 9l-7 7-7-7"} />
+          </svg>
+        )}
+      </button>
+
+      {isOpen && canSwitch && (
+        <div
+          className="absolute left-4 right-4 mt-1.5 rounded-lg shadow-lg overflow-hidden z-20"
+          style={{ backgroundColor: "#ffffff", border: "1px solid rgba(0,0,0,0.08)" }}
+        >
+          {intakeYears.length === 0 ? (
+            <p className="px-3 py-2.5 text-xs" style={{ color: "#999" }}>No intake years configured.</p>
+          ) : (
+            intakeYears.map((iy) => (
+              <button
+                key={iy.id}
+                onClick={() => !iy.isActive && !isLoading && activate(iy.id)}
+                disabled={iy.isActive || isLoading}
+                className="w-full text-left px-3 py-2.5 text-sm flex items-center justify-between transition-colors hover:bg-black/[0.03] disabled:cursor-default"
+                style={{ color: iy.isActive ? "#114E3B" : "#333" }}
+              >
+                {iy.label}
+                {iy.isActive && <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "#C79A3B" }}>Active</span>}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function AdminSidebar({ isGlobalAdmin, pendingStaffTaskCount, intlAttentionCount, unseenSubmissionCount, userName, activeIntakeLabel, intakeYears = [] }: AdminSidebarProps) {
   return (
     <aside className="w-56 flex-shrink-0 flex flex-col h-full" style={{ backgroundColor: "#114E3B" }}>
       {/* Logo */}
@@ -97,17 +182,9 @@ export function AdminSidebar({ isGlobalAdmin, pendingStaffTaskCount, intlAttenti
         </Link>
       </div>
 
-      {/* Intake badge */}
+      {/* Intake switcher */}
       {activeIntakeLabel && (
-        <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ backgroundColor: "rgba(199,154,59,0.15)", border: "1px solid rgba(199,154,59,0.25)" }}>
-            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: "#C79A3B" }} />
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "rgba(199,154,59,0.7)" }}>Active Intake</p>
-              <p className="text-sm font-bold" style={{ color: "#C79A3B" }}>{activeIntakeLabel}</p>
-            </div>
-          </div>
-        </div>
+        <IntakeSwitcher activeIntakeLabel={activeIntakeLabel} intakeYears={intakeYears} canSwitch={isGlobalAdmin} />
       )}
 
       {/* Nav */}

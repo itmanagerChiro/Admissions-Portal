@@ -19,6 +19,8 @@ interface EditApplicantFormProps {
     guardianName: string;
     guardianEmail: string;
     guardianPhone: string;
+    gpaScore: string;
+    prerequisitesMet: boolean;
   };
 }
 
@@ -29,7 +31,7 @@ export function EditApplicantForm({ applicationId, initial }: EditApplicantFormP
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  function set(field: string, value: string) {
+  function set<K extends keyof typeof form>(field: K, value: (typeof form)[K]) {
     setForm((p) => ({ ...p, [field]: value }));
   }
 
@@ -40,7 +42,7 @@ export function EditApplicantForm({ applicationId, initial }: EditApplicantFormP
     const res = await fetch(`/api/admin/applicants/${applicationId}/profile`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, gpaScore: form.gpaScore === "" ? null : form.gpaScore }),
     });
     setIsLoading(false);
     if (!res.ok) {
@@ -97,6 +99,13 @@ export function EditApplicantForm({ applicationId, initial }: EditApplicantFormP
             <div className="mt-3">
               <Input label="Phone" value={form.phone} onChange={(e) => set("phone", e.target.value)} />
             </div>
+            <div className="mt-3">
+              <Input label="GPA" type="number" step="0.01" value={form.gpaScore} onChange={(e) => set("gpaScore", e.target.value)} />
+            </div>
+            <label className="flex items-center gap-2 text-sm mt-3" style={{ color: "#333" }}>
+              <input type="checkbox" checked={form.prerequisitesMet} onChange={(e) => set("prerequisitesMet", e.target.checked)} />
+              Prerequisites met
+            </label>
           </div>
 
           <div>

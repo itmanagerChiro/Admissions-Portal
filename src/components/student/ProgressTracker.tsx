@@ -1,12 +1,12 @@
-﻿import type { ApplicationStageKey } from "@/generated/prisma/client";
-import { STAGE_ORDER, STAGE_LABELS } from "@/lib/stages";
+import type { ApplicationStageKey } from "@/generated/prisma/client";
+import { STAGE_DISPLAY_STEPS, stageDisplayIndex } from "@/lib/stages";
 
 interface ProgressTrackerProps {
   currentStage: ApplicationStageKey;
 }
 
 export function ProgressTracker({ currentStage }: ProgressTrackerProps) {
-  const currentIndex = STAGE_ORDER.indexOf(currentStage);
+  const currentIndex = stageDisplayIndex(currentStage);
 
   return (
     <div className="relative">
@@ -14,13 +14,13 @@ export function ProgressTracker({ currentStage }: ProgressTrackerProps) {
       <div className="absolute top-4 left-0 right-0 h-px bg-surface-dark" style={{ marginLeft: "2.5%", marginRight: "2.5%" }} />
 
       <div className="relative flex items-start justify-between">
-        {STAGE_ORDER.map((stage, index) => {
+        {STAGE_DISPLAY_STEPS.map((step, index) => {
           const isCompleted = index < currentIndex;
           const isActive = index === currentIndex;
           const isPending = index > currentIndex;
 
           return (
-            <div key={stage} className="flex flex-col items-center" style={{ width: `${100 / STAGE_ORDER.length}%` }}>
+            <div key={step.key} className="flex flex-col items-center" style={{ width: `${100 / STAGE_DISPLAY_STEPS.length}%` }}>
               {/* Node */}
               <div className="relative z-10 mb-2">
                 {isCompleted && (
@@ -48,7 +48,7 @@ export function ProgressTracker({ currentStage }: ProgressTrackerProps) {
                   isCompleted || isActive ? "text-text" : "text-text-muted",
                 ].join(" ")}
               >
-                {STAGE_LABELS[stage]}
+                {step.label}
               </span>
             </div>
           );

@@ -7,7 +7,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ te
   const session = await auth();
   if (!session?.user?.isGlobalAdmin) return new NextResponse(null, { status: 403 });
 
-  const { title, description, audience, isActive, dueDays, requiresDocument, documentInstructions } = await req.json();
+  const { title, description, audience, isActive, dueDays, requiresDocument, documentInstructions, requiredDocumentCategory } = await req.json();
 
   const template = await prisma.taskTemplate.update({
     where: { id: templateId },
@@ -19,6 +19,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ te
       ...(dueDays !== undefined ? { dueDays: dueDays === "" || dueDays == null ? null : parseInt(dueDays, 10) } : {}),
       ...(requiresDocument !== undefined ? { requiresDocument: !!requiresDocument } : {}),
       ...(documentInstructions !== undefined ? { documentInstructions: requiresDocument ? documentInstructions : null } : {}),
+      ...(requiredDocumentCategory !== undefined ? { requiredDocumentCategory: requiresDocument ? requiredDocumentCategory : "ANY" } : {}),
     },
   });
 

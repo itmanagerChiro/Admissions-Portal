@@ -29,6 +29,7 @@ async function main() {
       lastName: "Williamson",
       role: "STAFF",
       isGlobalAdmin: true,
+      emailVerified: new Date(),
     },
   });
   console.log(`✓ Global admin: ${globalAdmin.email}`);
@@ -45,6 +46,7 @@ async function main() {
       lastName: "Chen",
       role: "STAFF",
       isGlobalAdmin: false,
+      emailVerified: new Date(),
     },
   });
 
@@ -78,6 +80,7 @@ async function main() {
       lastName: "Taufa",
       role: "STAFF",
       isGlobalAdmin: false,
+      emailVerified: new Date(),
     },
   });
   for (const key of ["VIEW_APPLICANTS", "VIEW_INTERNATIONAL", "EDIT_INTERNATIONAL", "VIEW_REPORTS", "MANAGE_OWN_TASKS"]) {
@@ -97,7 +100,7 @@ async function main() {
       email: "emma.johnson@example.com",
       firstName: "Emma",
       lastName: "Johnson",
-      stage: "OFFERED",
+      stage: "OFFER_UNCONDITIONAL",
       category: "DOMESTIC",
       yearLevel: "YEAR_1",
       applicantNumber: "#0041",
@@ -107,7 +110,7 @@ async function main() {
       email: "liam.patel@example.com",
       firstName: "Liam",
       lastName: "Patel",
-      stage: "INTERVIEW_AND_ESSAY",
+      stage: "INTERVIEW",
       category: "INTERNATIONAL",
       yearLevel: "YEAR_1",
       applicantNumber: "#0042",
@@ -175,6 +178,7 @@ async function main() {
         firstName: s.firstName,
         lastName: s.lastName,
         role: "STUDENT",
+        emailVerified: new Date(),
       },
     });
 
@@ -216,7 +220,7 @@ async function main() {
         requiresDocument: true,
         documentInstructions: "Upload as PDF. Maximum 10MB per file.",
         assignedById: admissionsOfficer.id,
-        status: s.stage === "ENROLLED" || s.stage === "OFFERED" ? "APPROVED" : "PENDING",
+        status: s.stage === "ENROLLED" || s.stage === "OFFER_UNCONDITIONAL" ? "APPROVED" : "PENDING",
         dueDate: new Date(Date.now() + 14 * 86400000),
       },
     });
@@ -238,10 +242,10 @@ async function main() {
       await prisma.internationalCompliance.create({
         data: {
           applicationId: app.id,
-          visaStatus: s.stage === "OFFERED" || s.stage === "ENROLLED" ? "APPLIED" : "NOT_YET",
+          visaStatus: s.stage === "OFFER_UNCONDITIONAL" || s.stage === "ENROLLED" ? "APPLIED" : "NOT_YET",
           healthInsuranceStatus: s.stage === "ENROLLED" ? "CONFIRMED" : "NOT_YET",
-          ieltsStatus: s.stage === "COMMITTEE" || s.stage === "OFFERED" ? "CONFIRMED" : "IN_PROGRESS",
-          offerOfPlaceIssued: s.stage === "OFFERED" || s.stage === "ENROLLED",
+          ieltsStatus: s.stage === "COMMITTEE" || s.stage === "OFFER_UNCONDITIONAL" ? "CONFIRMED" : "IN_PROGRESS",
+          offerOfPlaceIssued: s.stage === "OFFER_UNCONDITIONAL" || s.stage === "ENROLLED",
         },
       });
     }

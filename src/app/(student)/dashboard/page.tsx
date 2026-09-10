@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { ProgressTracker } from "@/components/student/ProgressTracker";
 import { Badge } from "@/components/ui/Badge";
 import Link from "next/link";
-import { STAGE_LABELS, STAGE_ORDER } from "@/lib/stages";
+import { STAGE_STATUS_LABELS, STAGE_DISPLAY_STEPS, stageDisplayIndex } from "@/lib/stages";
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -42,7 +42,7 @@ export default async function DashboardPage() {
   }
 
   const unreadCount = application.messageThread?.messages.length ?? 0;
-  const stageIndex = STAGE_ORDER.indexOf(application.currentStage);
+  const stageIndex = stageDisplayIndex(application.currentStage);
 
   return (
     <div className="px-8 py-8 max-w-4xl">
@@ -56,7 +56,7 @@ export default async function DashboardPage() {
       {application.tasks.length > 0 && (
         <p className="text-text-muted text-sm">
           You have {application.tasks.length} task{application.tasks.length !== 1 ? "s" : ""} requiring attention
-          {application.tasks[0]?.dueDate ? ` before your ${STAGE_LABELS[application.currentStage].toLowerCase()}` : ""}.
+          {application.tasks[0]?.dueDate ? ` before your ${STAGE_STATUS_LABELS[application.currentStage].toLowerCase()}` : ""}.
         </p>
       )}
 
@@ -80,7 +80,7 @@ export default async function DashboardPage() {
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-serif text-lg text-text">Your Application Progress</h2>
           <Badge variant="muted">
-            Stage {stageIndex + 1} of {STAGE_ORDER.length} · {STAGE_LABELS[application.currentStage]}
+            Stage {stageIndex + 1} of {STAGE_DISPLAY_STEPS.length} · {STAGE_STATUS_LABELS[application.currentStage]}
           </Badge>
         </div>
         <ProgressTracker currentStage={application.currentStage} />
@@ -132,8 +132,7 @@ export default async function DashboardPage() {
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           {[
             ["Applicant type", `${application.category === "DOMESTIC" ? "Domestic" : "International"} · Year ${application.yearLevel === "YEAR_1" ? "1" : "2"}`],
-            ["Current stage", STAGE_LABELS[application.currentStage]],
-            ["Applicant number", application.applicantNumber],
+            ["Current stage", STAGE_STATUS_LABELS[application.currentStage]],
             ["Application submitted", application.submittedAt ? new Date(application.submittedAt).toLocaleDateString("en-NZ", { day: "numeric", month: "long", year: "numeric" }) : "—"],
             ["Intake year", application.intakeYear.label],
           ].map(([label, value], i, arr) => (

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { permissionGuard } from "@/lib/permissions";
 import { createTimelineEvent } from "@/lib/timeline";
 import { notifyStudentOfNewTasks } from "@/lib/notifications";
+import { logAudit } from "@/lib/audit";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -40,6 +41,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   });
 
   await notifyStudentOfNewTasks(id, [task]);
+
+  await logAudit({
+    applicationId: id,
+    objectType: "Task",
+    objectId: task.id,
+    action: "CREATE",
+    actionDetail: `Task "${title}" created and assigned`,
+    userId: session!.user.id,
+  });
 
   return NextResponse.json(task, { status: 201 });
 }

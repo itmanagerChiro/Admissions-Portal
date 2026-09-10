@@ -4,6 +4,7 @@ import { permissionGuard } from "@/lib/permissions";
 import { createTimelineEvent, STAGE_ORDER } from "@/lib/timeline";
 import { generateTasksForStage } from "@/lib/taskTemplates";
 import { notifyStudentOfNewTasks, notifyStudentOfStageChange } from "@/lib/notifications";
+import { logAudit } from "@/lib/audit";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -73,6 +74,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   await notifyStudentOfNewTasks(id, newTasks);
   if (notifyStudent) await notifyStudentOfStageChange(id, nextStage);
+
+  await logAudit({
+    applicationId: id,
+    objectType: "Application",
+    objectId: id,
+    action: "UPDATE",
+    actionDetail: `Stage changed from ${app.currentStage} to ${nextStage}${notes ? ` — ${notes}` : ""}`,
+    userId: session!.user.id,
+  });
 
   return NextResponse.json({ success: true, stage: nextStage });
 }

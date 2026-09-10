@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { permissionGuard } from "@/lib/permissions";
 import { createTimelineEvent } from "@/lib/timeline";
 import { notifyAdminsOfAllTasksComplete } from "@/lib/notifications";
+import { logAudit } from "@/lib/audit";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string; taskId: string }> }) {
@@ -50,6 +51,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (remaining === 0) await notifyAdminsOfAllTasksComplete(id);
     }
 
+    await logAudit({
+      applicationId: id,
+      objectType: "Task",
+      objectId: taskId,
+      action: "UPDATE",
+      actionDetail: `Task "${task.title}" ${action === "approve" ? "approved" : "rejected"}${reviewNote ? ` — ${reviewNote}` : ""}`,
+      userId: session!.user.id,
+    });
+
     return NextResponse.json({ success: true });
   }
 
@@ -60,6 +70,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     await prisma.task.update({
       where: { id: taskId },
       data: { acknowledgedAt: new Date(), acknowledgedById: session!.user.id },
+    });
+
+    await logAudit({
+      applicationId: id,
+      objectType: "Task",
+      objectId: taskId,
+      action: "UPDATE",
+      actionDetail: `Task "${task.title}" acknowledged`,
+      userId: session!.user.id,
     });
 
     return NextResponse.json({ success: true });
@@ -94,6 +113,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (remaining === 0) await notifyAdminsOfAllTasksComplete(id);
     }
 
+    await logAudit({
+      applicationId: id,
+      objectType: "Task",
+      objectId: taskId,
+      action: "UPDATE",
+      actionDetail: `Task "${task.title}" marked ${isNowComplete ? "complete" : "incomplete"}`,
+      userId: session!.user.id,
+    });
+
     return NextResponse.json({ success: true });
   }
 
@@ -104,6 +132,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const assignedToId: string | null = body.assignedToId ?? null;
 
     await prisma.task.update({ where: { id: taskId }, data: { assignedToId } });
+
+    await logAudit({
+      applicationId: id,
+      objectType: "Task",
+      objectId: taskId,
+      action: "UPDATE",
+      actionDetail: `Task "${task.title}" reassigned`,
+      userId: session!.user.id,
+    });
 
     return NextResponse.json({ success: true });
   }
@@ -128,6 +165,15 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       { status: 409 }
     );
   }
+
+  await logAudit({
+    applicationId: id,
+    objectType: "Task",
+    objectId: taskId,
+    action: "DELETE",
+    actionDetail: `Task "${task.title}" deleted`,
+    userId: session!.user.id,
+  });
 
   return NextResponse.json({ success: true });
 }

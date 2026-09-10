@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logAudit } from "@/lib/audit";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -29,6 +30,15 @@ export async function POST(req: Request) {
       senderId: session.user.id,
       body,
     },
+  });
+
+  await logAudit({
+    applicationId: application.id,
+    objectType: "Message",
+    objectId: message.id,
+    action: "CREATE",
+    actionDetail: "Student sent a message",
+    userId: session.user.id,
   });
 
   return Response.json(message, { status: 201 });

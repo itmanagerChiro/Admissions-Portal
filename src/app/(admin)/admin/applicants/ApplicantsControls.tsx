@@ -16,11 +16,13 @@ const SORT_OPTIONS = [
 
 interface ApplicantsControlsProps {
   stages: { value: string; label: string }[];
+  intakeYears: { id: string; label: string }[];
   defaultSearch?: string;
   defaultStage?: string;
   defaultType?: string;
   defaultYear?: string;
   defaultSort?: string;
+  defaultIntake?: string;
 }
 
 const selectStyle = {
@@ -35,11 +37,13 @@ const selectStyle = {
 
 export function ApplicantsControls({
   stages,
+  intakeYears,
   defaultSearch = "",
   defaultStage = "",
   defaultType = "",
   defaultYear = "",
   defaultSort = "updatedAt_desc",
+  defaultIntake = "",
 }: ApplicantsControlsProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
@@ -68,6 +72,10 @@ export function ApplicantsControls({
         style={{ backgroundColor: "#fff", border: "1.5px solid rgba(0,0,0,0.1)" }}
         onKeyDown={(e) => e.key === "Enter" && submit()}
       />
+      <select name="intake" defaultValue={defaultIntake} onChange={submit} style={selectStyle}>
+        <option value="">All visible intakes</option>
+        {intakeYears.map((iy) => <option key={iy.id} value={iy.id}>{iy.label}</option>)}
+      </select>
       <select name="stage" defaultValue={defaultStage} onChange={submit} style={selectStyle}>
         <option value="">All stages</option>
         {stages.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}

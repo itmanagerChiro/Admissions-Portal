@@ -40,6 +40,7 @@ export async function generateTasksForStage(
           dueDate: template.dueDays != null ? addDays(new Date(), template.dueDays) : null,
           requiresDocument: template.requiresDocument,
           documentInstructions: template.documentInstructions,
+          requiredDocumentCategory: template.requiredDocumentCategory,
         },
       })
     )

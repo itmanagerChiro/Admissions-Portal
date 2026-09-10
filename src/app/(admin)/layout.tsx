@@ -10,16 +10,20 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect("/login");
   }
 
-  const activeIntake = await prisma.intakeYear.findFirst({ where: { isActive: true } });
+  const [activeIntake, intakeYears] = await Promise.all([
+    prisma.intakeYear.findFirst({ where: { isActive: true } }),
+    prisma.intakeYear.findMany({ where: { isVisible: true, isArchived: false }, orderBy: { year: "desc" } }),
+  ]);
+  const visibleIntakeIds = intakeYears.map((iy) => iy.id);
 
   const [pendingStaffTaskCount, intlAttentionCount, unseenSubmissionCount] = await Promise.all([
     prisma.staffTask.count({
       where: { assignedToId: session.user.id, status: "PENDING" },
     }),
-    activeIntake
+    visibleIntakeIds.length > 0
       ? prisma.internationalCompliance.count({
           where: {
-            application: { intakeYearId: activeIntake.id },
+            application: { intakeYearId: { in: visibleIntakeIds } },
             OR: [
               { visaStatus: "NOT_YET" },
               { healthInsuranceStatus: "NOT_YET" },
@@ -43,6 +47,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         userName={`${session.user.firstName} ${session.user.lastName}`}
         isAdmin={!!session.user.isGlobalAdmin}
         activeIntakeLabel={activeIntake?.label}
+        intakeYears={intakeYears.map((iy) => ({ id: iy.id, label: iy.label, isActive: iy.isActive }))}
       />
       <main className="flex-1 overflow-y-auto bg-surface">
         {children}

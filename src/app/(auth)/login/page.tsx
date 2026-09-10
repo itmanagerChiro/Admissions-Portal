@@ -36,6 +36,8 @@ export default function LoginPage() {
       if (result.code === "EMAIL_NOT_VERIFIED") {
         setError("Please verify your email before signing in. Check your inbox for the verification link.");
         setUnverified(true);
+      } else if (result.code === "ACCOUNT_DELETION_REQUESTED") {
+        setError("This account is pending deletion. Please contact Support@nzcc.ac.nz.");
       } else {
         setError("Invalid email or password.");
       }
@@ -117,8 +119,8 @@ export default function LoginPage() {
             <Link href="/forgot-password" className="text-text-muted hover:text-green transition-colors">
               Forgot password?
             </Link>
-            <Link href="/register" className="text-green hover:text-green-dark transition-colors font-semibold">
-              Create account
+            <Link href="/apply" className="text-green hover:text-green-dark transition-colors font-semibold">
+              Apply now
             </Link>
           </div>
         </div>

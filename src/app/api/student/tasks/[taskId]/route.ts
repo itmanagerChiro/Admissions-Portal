@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createTimelineEvent } from "@/lib/timeline";
+import { logAudit } from "@/lib/audit";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ taskId: string }> }) {
   const { taskId } = await params;
@@ -38,6 +39,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ taskId
     description: "Your submission is under review by the admissions team.",
     relatedTaskId: taskId,
     createdById: session.user.id,
+  });
+
+  await logAudit({
+    applicationId: application.id,
+    objectType: "Task",
+    objectId: taskId,
+    action: "UPDATE",
+    actionDetail: `Student submitted task "${task.title}"`,
+    userId: session.user.id,
   });
 
   return Response.json({ success: true });

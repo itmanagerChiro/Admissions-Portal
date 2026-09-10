@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissionGuard } from "@/lib/permissions";
+import { logAudit } from "@/lib/audit";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -27,6 +28,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       senderRole: "STAFF",
       body,
     },
+  });
+
+  await logAudit({
+    applicationId: id,
+    objectType: "Message",
+    objectId: message.id,
+    action: "CREATE",
+    actionDetail: "Staff sent a message",
+    userId: session!.user.id,
   });
 
   return NextResponse.json(message, { status: 201 });

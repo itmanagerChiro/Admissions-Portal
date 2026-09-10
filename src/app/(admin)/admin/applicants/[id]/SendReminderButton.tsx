@@ -33,7 +33,7 @@ export function SendReminderButton({ applicationId }: { applicationId: string })
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <Button variant="ghost" size="sm" onClick={handleClick} isLoading={isLoading}>
+      <Button variant="secondary" size="sm" onClick={handleClick} isLoading={isLoading}>
         Send Task Reminder
       </Button>
       {message && <p className="text-xs" style={{ color: "#888" }}>{message}</p>}

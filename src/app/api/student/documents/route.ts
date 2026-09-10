@@ -2,6 +2,9 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getStorageProvider } from "@/lib/storage";
 import { isMimeTypeAllowed, categoryRejectionMessage } from "@/lib/documentValidation";
+import { logAudit } from "@/lib/audit";
+import { notifyAdminsOfDocumentUpload } from "@/lib/notifications";
+import { createTimelineEvent } from "@/lib/timeline";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -19,8 +22,16 @@ export async function POST(req: Request) {
   const file = formData.get("file") as File | null;
   const documentType = (formData.get("documentType") as string) ?? "GENERAL";
   const taskId = formData.get("taskId") as string | null;
+  const offerConditionId = formData.get("offerConditionId") as string | null;
 
   if (!file) return Response.json({ error: "No file provided." }, { status: 400 });
+
+  if (offerConditionId) {
+    const condition = await prisma.offerCondition.findFirst({
+      where: { id: offerConditionId, offer: { applicationId: application.id } },
+    });
+    if (!condition) return Response.json({ error: "Condition not found." }, { status: 404 });
+  }
 
   const MAX_SIZE = 10 * 1024 * 1024;
   if (file.size > MAX_SIZE) {
@@ -35,6 +46,11 @@ export async function POST(req: Request) {
     if (!task) return Response.json({ error: "Task not found." }, { status: 404 });
     if (!isMimeTypeAllowed(file.type, task.requiredDocumentCategory)) {
       return Response.json({ error: categoryRejectionMessage(task.requiredDocumentCategory) }, { status: 400 });
+    }
+  } else {
+    // General (unlinked) uploads are document evidence — images are not accepted here.
+    if (!isMimeTypeAllowed(file.type, "DOCUMENT")) {
+      return Response.json({ error: categoryRejectionMessage("DOCUMENT") }, { status: 400 });
     }
   }
 
@@ -54,6 +70,7 @@ export async function POST(req: Request) {
     data: {
       applicationId: application.id,
       taskId: taskId || undefined,
+      offerConditionId: offerConditionId || undefined,
       filename: file.name,
       storedFilename,
       mimeType: file.type,
@@ -62,6 +79,26 @@ export async function POST(req: Request) {
       documentType,
     },
   });
+
+  await logAudit({
+    applicationId: application.id,
+    objectType: "Document",
+    objectId: document.id,
+    action: "CREATE",
+    actionDetail: `Student uploaded document "${file.name}"`,
+    userId: session.user.id,
+  });
+
+  await createTimelineEvent({
+    applicationId: application.id,
+    eventType: "DOCUMENT_UPLOADED",
+    title: `Document uploaded: ${file.name}`,
+    isVisibleToStudent: true,
+    relatedDocumentId: document.id,
+    createdById: session.user.id,
+  });
+
+  await notifyAdminsOfDocumentUpload(application.id, file.name);
 
   return Response.json({ id: document.id }, { status: 201 });
 }

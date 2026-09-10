@@ -9,6 +9,7 @@ import { STAGE_LABELS, STAGE_ORDER } from "@/lib/stages";
 import type { ApplicationStageKey } from "@/generated/prisma/client";
 
 type Audience = "STAFF" | "STUDENT";
+type DocumentCategory = "ANY" | "DOCUMENT" | "IMAGE";
 
 interface TaskTemplate {
   id: string;
@@ -20,6 +21,7 @@ interface TaskTemplate {
   dueDays: number | null;
   requiresDocument: boolean;
   documentInstructions: string | null;
+  requiredDocumentCategory: DocumentCategory;
 }
 
 interface TaskTemplateFormState {
@@ -29,6 +31,7 @@ interface TaskTemplateFormState {
   dueDays: string;
   requiresDocument: boolean;
   documentInstructions: string;
+  requiredDocumentCategory: DocumentCategory;
 }
 
 const EMPTY_FORM: TaskTemplateFormState = {
@@ -38,6 +41,7 @@ const EMPTY_FORM: TaskTemplateFormState = {
   dueDays: "",
   requiresDocument: false,
   documentInstructions: "",
+  requiredDocumentCategory: "ANY",
 };
 
 export function TaskTemplateManager({ templates }: { templates: TaskTemplate[] }) {
@@ -75,6 +79,7 @@ export function TaskTemplateManager({ templates }: { templates: TaskTemplate[] }
       dueDays: t.dueDays != null ? String(t.dueDays) : "",
       requiresDocument: t.requiresDocument,
       documentInstructions: t.documentInstructions ?? "",
+      requiredDocumentCategory: t.requiredDocumentCategory,
     });
   }
 
@@ -164,7 +169,9 @@ export function TaskTemplateManager({ templates }: { templates: TaskTemplate[] }
                               <span className="text-[10px] uppercase tracking-wide" style={{ color: "#aaa" }}>Due {t.dueDays}d</span>
                             )}
                             {t.requiresDocument && (
-                              <span className="text-[10px] uppercase tracking-wide" style={{ color: "#aaa" }}>Requires document</span>
+                              <span className="text-[10px] uppercase tracking-wide" style={{ color: "#aaa" }}>
+                                Requires {t.requiredDocumentCategory === "DOCUMENT" ? "document" : t.requiredDocumentCategory === "IMAGE" ? "image" : "file"}
+                              </span>
                             )}
                           </div>
                           <p className="text-xs" style={{ color: "#888" }}>{t.description}</p>
@@ -260,17 +267,32 @@ function TaskTemplateForm({
       </div>
 
       {form.requiresDocument && (
-        <div>
-          <label className="block text-sm font-semibold text-text mb-1.5">Document instructions</label>
-          <textarea
-            value={form.documentInstructions}
-            onChange={(e) => set("documentInstructions", e.target.value)}
-            rows={2}
-            className="w-full px-3 py-2.5 text-sm focus:outline-none text-text placeholder:text-text-light resize-none rounded-lg"
-            style={{ backgroundColor: fieldBg, border: "1.5px solid rgba(0,0,0,0.1)" }}
-            placeholder="Tell the student what to upload…"
-          />
-        </div>
+        <>
+          <div>
+            <label className="block text-sm font-semibold text-text mb-1.5">Accepted file type</label>
+            <select
+              value={form.requiredDocumentCategory}
+              onChange={(e) => set("requiredDocumentCategory", e.target.value as DocumentCategory)}
+              className="w-full px-3 py-2.5 text-sm focus:outline-none text-text rounded-lg"
+              style={{ backgroundColor: fieldBg, border: "1.5px solid rgba(0,0,0,0.1)" }}
+            >
+              <option value="ANY">Any file type</option>
+              <option value="DOCUMENT">Document only (PDF or Word)</option>
+              <option value="IMAGE">Image only (JPG, PNG, etc.)</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-text mb-1.5">Document instructions</label>
+            <textarea
+              value={form.documentInstructions}
+              onChange={(e) => set("documentInstructions", e.target.value)}
+              rows={2}
+              className="w-full px-3 py-2.5 text-sm focus:outline-none text-text placeholder:text-text-light resize-none rounded-lg"
+              style={{ backgroundColor: fieldBg, border: "1.5px solid rgba(0,0,0,0.1)" }}
+              placeholder="Tell the student what to upload…"
+            />
+          </div>
+        </>
       )}
 
       <AudienceToggle value={form.audience} onChange={(a) => set("audience", a)} />

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { NotImplementedButton } from "@/components/ui/NotImplementedButton";
 import { STAGE_LABELS } from "@/lib/stages";
+import { resolveIntakeFilter } from "@/lib/intakeYears";
+import { IntakeFilterPicker } from "@/components/admin/IntakeFilterPicker";
 import type { ApplicationStageKey } from "@/generated/prisma/client";
 
 function getGreeting() {
@@ -18,26 +20,32 @@ const STAGE_BADGE_VARIANT: Record<ApplicationStageKey, "muted" | "gold" | "blue"
   NEW_SUBMITTED: "muted",
   INTAKE_REVIEW: "blue",
   ACADEMIC_CHECK: "gold",
-  INTERVIEW_AND_ESSAY: "blue",
+  INTERVIEW: "blue",
+  ESSAY: "blue",
   COMMITTEE: "red",
-  OFFERED: "gold",
+  OFFER_CONDITIONAL: "gold",
+  OFFER_UNCONDITIONAL: "gold",
+  ACCEPTED: "green",
   ENROLLED: "olive",
 };
 
-export default async function AdminDashboardPage() {
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ intake?: string }>;
+}) {
+  const { intake } = await searchParams;
   const session = await auth();
   if (!session?.user || session.user.role !== "STAFF") redirect("/login");
 
-  const activeIntake = await prisma.intakeYear.findFirst({ where: { isActive: true } });
+  const intakeFilter = await resolveIntakeFilter(intake);
 
   const [stageCounts, todayTasks] = await Promise.all([
-    activeIntake
-      ? prisma.application.groupBy({
-          by: ["currentStage"],
-          where: { intakeYearId: activeIntake.id },
-          _count: true,
-        })
-      : [],
+    prisma.application.groupBy({
+      by: ["currentStage"],
+      where: intakeFilter.where,
+      _count: true,
+    }),
     prisma.staffTask.findMany({
       where: { assignedToId: session.user.id, status: "PENDING" },
       include: { application: { select: { applicantNumber: true, student: { select: { firstName: true, lastName: true } } } } },
@@ -52,21 +60,19 @@ export default async function AdminDashboardPage() {
 
   const totalApplications = Object.values(stageMap).reduce((a, b) => a + b, 0);
   const awaitingReview = stageMap["NEW_SUBMITTED"] ?? 0;
-  const atInterview = stageMap["INTERVIEW_AND_ESSAY"] ?? 0;
-  const offersSent = stageMap["OFFERED"] ?? 0;
+  const atInterview = (stageMap["INTERVIEW"] ?? 0) + (stageMap["ESSAY"] ?? 0);
+  const offersSent = (stageMap["OFFER_CONDITIONAL"] ?? 0) + (stageMap["OFFER_UNCONDITIONAL"] ?? 0);
   const enrolled = stageMap["ENROLLED"] ?? 0;
 
   // Pipeline snapshot: first 3 apps per stage for the preview strip
-  const pipelineApps = activeIntake
-    ? await prisma.application.findMany({
-        where: { intakeYearId: activeIntake.id },
-        orderBy: { updatedAt: "desc" },
-        take: 21,
-        include: {
-          student: { select: { firstName: true, lastName: true } },
-        },
-      })
-    : [];
+  const pipelineApps = await prisma.application.findMany({
+    where: intakeFilter.where,
+    orderBy: { updatedAt: "desc" },
+    take: 21,
+    include: {
+      student: { select: { firstName: true, lastName: true } },
+    },
+  });
 
   // Group by stage (max 3 per)
   const pipelineByStage: Record<string, typeof pipelineApps> = {};
@@ -79,13 +85,13 @@ export default async function AdminDashboardPage() {
 
   const STAGES: ApplicationStageKey[] = [
     "NEW_SUBMITTED", "INTAKE_REVIEW", "ACADEMIC_CHECK",
-    "INTERVIEW_AND_ESSAY", "COMMITTEE", "OFFERED", "ENROLLED",
+    "INTERVIEW", "ESSAY", "COMMITTEE", "OFFER_CONDITIONAL", "OFFER_UNCONDITIONAL", "ACCEPTED", "ENROLLED",
   ];
 
   return (
     <div className="px-8 py-7 max-w-6xl">
       <p className="text-xs font-semibold tracking-widest uppercase text-text-muted mb-1">
-        {activeIntake?.label ?? "Admin"}
+        {intakeFilter.label}
       </p>
       <div className="flex items-end justify-between mb-6">
         <div>
@@ -95,6 +101,7 @@ export default async function AdminDashboardPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <IntakeFilterPicker intakeYears={intakeFilter.visibleIntakes.map((iy) => ({ id: iy.id, label: iy.label }))} />
           <Link href="/admin/applicants" className="px-4 py-2 rounded-lg bg-white shadow-sm text-sm font-medium text-text-muted hover:text-green transition-colors">
             Export CSV
           </Link>

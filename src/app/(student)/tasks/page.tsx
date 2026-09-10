@@ -27,7 +27,7 @@ export default async function TasksPage() {
 
       {tasks.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-sm py-16 text-center text-sm" style={{ color: "#aaa" }}>
-          No tasks assigned yet. Check back soon.
+          You're up to date. No tasks require your attention right now.
         </div>
       ) : (
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">

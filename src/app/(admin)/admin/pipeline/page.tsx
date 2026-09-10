@@ -5,36 +5,41 @@ import { requirePermission, hasPermission } from "@/lib/permissions";
 import { Badge } from "@/components/ui/Badge";
 import { WipBanner } from "@/components/ui/WipBanner";
 import { STAGE_ORDER, STAGE_LABELS } from "@/lib/stages";
+import { resolveIntakeFilter } from "@/lib/intakeYears";
 import Link from "next/link";
 import { PipelineBoard } from "./PipelineBoard";
+import { IntakeFilterPicker } from "@/components/admin/IntakeFilterPicker";
 
 const STAGE_BADGE_VARIANT: Record<string, "olive" | "gold" | "blue" | "green" | "muted" | "purple"> = {
   NEW_SUBMITTED: "muted",
   INTAKE_REVIEW: "blue",
   ACADEMIC_CHECK: "purple",
-  INTERVIEW_AND_ESSAY: "gold",
+  INTERVIEW: "gold",
+  ESSAY: "gold",
   COMMITTEE: "gold",
-  OFFERED: "green",
+  OFFER_CONDITIONAL: "green",
+  OFFER_UNCONDITIONAL: "green",
+  ACCEPTED: "green",
   ENROLLED: "olive",
 };
 
 export default async function PipelinePage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string }>;
+  searchParams: Promise<{ filter?: string; intake?: string }>;
 }) {
   const session = await auth();
   if (!session?.user || session.user.role !== "STAFF") redirect("/login");
   requirePermission(session, "VIEW_APPLICANTS");
 
-  const { filter } = await searchParams;
+  const { filter, intake } = await searchParams;
   const canDrag = hasPermission(session, "ADVANCE_APPLICATION_STAGE");
 
-  const activeIntake = await prisma.intakeYear.findFirst({ where: { isActive: true } });
+  const intakeFilter = await resolveIntakeFilter(intake);
 
   const applications = await prisma.application.findMany({
     where: {
-      ...(activeIntake ? { intakeYearId: activeIntake.id } : {}),
+      ...intakeFilter.where,
       ...(filter === "DOMESTIC" ? { category: "DOMESTIC" } : {}),
       ...(filter === "INTERNATIONAL" ? { category: "INTERNATIONAL" } : {}),
     },
@@ -66,13 +71,17 @@ export default async function PipelinePage({
       <div className="px-8 py-5 border-b flex items-center justify-between">
         <div>
           <h1 className="font-serif text-2xl text-text">Admissions Pipeline</h1>
-          <p className="text-sm text-text-muted mt-0.5">{applications.length} applicants · {activeIntake?.label ?? "No active intake"}</p>
+          <p className="text-sm text-text-muted mt-0.5">{applications.length} applicants · {intakeFilter.label}</p>
         </div>
         <div className="flex items-center gap-2">
+          <IntakeFilterPicker intakeYears={intakeFilter.visibleIntakes.map((iy) => ({ id: iy.id, label: iy.label }))} />
           {(["ALL", "DOMESTIC", "INTERNATIONAL"] as const).map((f) => (
             <Link
               key={f}
-              href={f === "ALL" ? "/admin/pipeline" : `/admin/pipeline?filter=${f}`}
+              href={{
+                pathname: "/admin/pipeline",
+                query: { ...(f !== "ALL" ? { filter: f } : {}), ...(intake ? { intake } : {}) },
+              }}
               className={[
                 "px-3 py-1.5 text-xs font-semibold transition-colors",
                 (filter === f || (!filter && f === "ALL"))

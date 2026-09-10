@@ -3,22 +3,28 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requirePermission, hasPermission } from "@/lib/permissions";
 import { Badge } from "@/components/ui/Badge";
-import { WipBanner } from "@/components/ui/WipBanner";
 import { STAGE_LABELS } from "@/lib/stages";
+import { resolveIntakeFilter } from "@/lib/intakeYears";
+import { IntakeFilterPicker } from "@/components/admin/IntakeFilterPicker";
 import { ComplianceRow } from "./ComplianceRow";
 
-export default async function InternationalPage() {
+export default async function InternationalPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ intake?: string }>;
+}) {
+  const { intake } = await searchParams;
   const session = await auth();
   if (!session?.user || session.user.role !== "STAFF") redirect("/login");
   requirePermission(session, "VIEW_INTERNATIONAL");
 
   const canEdit = hasPermission(session, "EDIT_INTERNATIONAL");
-  const activeIntake = await prisma.intakeYear.findFirst({ where: { isActive: true } });
+  const intakeFilter = await resolveIntakeFilter(intake);
 
   const applications = await prisma.application.findMany({
     where: {
       category: "INTERNATIONAL",
-      ...(activeIntake ? { intakeYearId: activeIntake.id } : {}),
+      ...intakeFilter.where,
     },
     select: {
       id: true,
@@ -34,13 +40,15 @@ export default async function InternationalPage() {
 
   return (
     <div className="px-8 py-7">
-      <WipBanner>This page is currently a placeholder with no logic implemented.</WipBanner>
-      <div className="mb-6">
-        <p className="text-xs font-semibold text-text-muted uppercase tracking-widest mb-1">Compliance Tracking</p>
-        <h1 className="font-serif text-2xl text-text">International Applicants</h1>
-        <p className="text-sm text-text-muted mt-1">
-          {applications.length} international students · Track visa, insurance and IELTS status.
-        </p>
+      <div className="mb-6 flex items-end justify-between">
+        <div>
+          <p className="text-xs font-semibold text-text-muted uppercase tracking-widest mb-1">Compliance Tracking · {intakeFilter.label}</p>
+          <h1 className="font-serif text-2xl text-text">International Applicants</h1>
+          <p className="text-sm text-text-muted mt-1">
+            {applications.length} international students · Track visa, insurance and IELTS status.
+          </p>
+        </div>
+        <IntakeFilterPicker intakeYears={intakeFilter.visibleIntakes.map((iy) => ({ id: iy.id, label: iy.label }))} />
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission, hasPermission } from "@/lib/permissions";
 import { Badge } from "@/components/ui/Badge";
 import { DocumentVerifyButtons } from "./DocumentVerifyButtons";
+import { DocumentDeleteButton } from "./DocumentDeleteButton";
 import Link from "next/link";
 
 export default async function ApplicantDocumentsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -24,6 +25,7 @@ export default async function ApplicantDocumentsPage({ params }: { params: Promi
   if (!app) notFound();
 
   const canVerify = hasPermission(session, "VERIFY_DOCUMENTS");
+  const canDelete = hasPermission(session, "DELETE_DOCUMENTS");
 
   return (
     <div className="px-8 py-7 max-w-3xl">
@@ -72,6 +74,9 @@ export default async function ApplicantDocumentsPage({ params }: { params: Promi
                   </a>
                   {canVerify && doc.status === "PENDING_REVIEW" && (
                     <DocumentVerifyButtons documentId={doc.id} applicationId={id} />
+                  )}
+                  {canDelete && (
+                    <DocumentDeleteButton documentId={doc.id} applicationId={id} filename={doc.filename} />
                   )}
                 </div>
               </div>

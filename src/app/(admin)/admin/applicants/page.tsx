@@ -5,7 +5,8 @@ import { requirePermission } from "@/lib/permissions";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { NotImplementedButton } from "@/components/ui/NotImplementedButton";
-import { STAGE_LABELS, STAGE_ORDER } from "@/lib/stages";
+import { STAGE_LABELS, STAGE_STATUS_LABELS, STAGE_ORDER } from "@/lib/stages";
+import { resolveIntakeFilter } from "@/lib/intakeYears";
 import { ApplicantsControls } from "./ApplicantsControls";
 import type { ApplicationStageKey, Prisma } from "@/generated/prisma/client";
 
@@ -13,9 +14,12 @@ const STAGE_VARIANTS: Record<ApplicationStageKey, "muted" | "blue" | "gold" | "r
   NEW_SUBMITTED: "muted",
   INTAKE_REVIEW: "blue",
   ACADEMIC_CHECK: "gold",
-  INTERVIEW_AND_ESSAY: "blue",
+  INTERVIEW: "blue",
+  ESSAY: "blue",
   COMMITTEE: "red",
-  OFFERED: "gold",
+  OFFER_CONDITIONAL: "gold",
+  OFFER_UNCONDITIONAL: "gold",
+  ACCEPTED: "green",
   ENROLLED: "olive",
 };
 
@@ -35,7 +39,7 @@ function buildOrderBy(sort: string): Prisma.ApplicationOrderByWithRelationInput[
 export default async function AllApplicantsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; stage?: string; type?: string; year?: string; sort?: string }>;
+  searchParams: Promise<{ search?: string; stage?: string; type?: string; year?: string; sort?: string; intake?: string }>;
 }) {
   const params = await searchParams;
   const sort = params.sort ?? "updatedAt_desc";
@@ -43,10 +47,10 @@ export default async function AllApplicantsPage({
   if (!session?.user || session.user.role !== "STAFF") redirect("/login");
   requirePermission(session, "VIEW_APPLICANTS");
 
-  const activeIntake = await prisma.intakeYear.findFirst({ where: { isActive: true } });
+  const intakeFilter = await resolveIntakeFilter(params.intake);
 
   const where: Prisma.ApplicationWhereInput = {
-    ...(activeIntake ? { intakeYearId: activeIntake.id } : {}),
+    ...intakeFilter.where,
     ...(params.stage ? { currentStage: params.stage as ApplicationStageKey } : {}),
     ...(params.type === "DOMESTIC" || params.type === "INTERNATIONAL" ? { category: params.type } : {}),
     ...(params.year === "YEAR_1" || params.year === "YEAR_2" ? { yearLevel: params.year } : {}),
@@ -88,7 +92,7 @@ export default async function AllApplicantsPage({
   return (
     <div className="px-8 py-7">
       <p className="text-xs font-semibold tracking-widest uppercase text-text-muted mb-1">
-        {activeIntake?.label ?? "Intake"}
+        {intakeFilter.label}
       </p>
       <div className="flex items-end justify-between mb-5">
         <div>
@@ -109,11 +113,13 @@ export default async function AllApplicantsPage({
 
       <ApplicantsControls
         stages={STAGES}
+        intakeYears={intakeFilter.visibleIntakes.map((iy) => ({ id: iy.id, label: iy.label }))}
         defaultSearch={params.search}
         defaultStage={params.stage}
         defaultType={params.type}
         defaultYear={params.year}
         defaultSort={sort}
+        defaultIntake={params.intake}
       />
 
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -158,7 +164,7 @@ export default async function AllApplicantsPage({
                   </td>
                   <td className="px-5 py-4">
                     <Badge variant={STAGE_VARIANTS[app.currentStage]}>
-                      {STAGE_LABELS[app.currentStage]}
+                      {STAGE_STATUS_LABELS[app.currentStage]}
                     </Badge>
                   </td>
                   <td className="px-5 py-4">

@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import Link from "next/link";
+import type { TimelineEventType } from "@/generated/prisma/client";
 
 const EVENT_ICONS: Record<string, string> = {
   STAGE_CHANGE: "→",
@@ -55,7 +56,7 @@ export default async function ApplicantTimelinePage({
                 ],
               }
             : {}),
-          ...(sp.type ? { eventType: sp.type } : {}),
+          ...(sp.type ? { eventType: sp.type as TimelineEventType } : {}),
           ...(sp.visibility === "student" ? { isVisibleToStudent: true } : {}),
           ...(sp.visibility === "internal" ? { isVisibleToStudent: false } : {}),
         },

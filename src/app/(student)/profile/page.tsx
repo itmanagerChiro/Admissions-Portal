@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ProfileForm } from "./ProfileForm";
+import { DeleteAccountSection } from "./DeleteAccountSection";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -36,6 +37,10 @@ export default async function ProfilePage() {
           guardianPhone: user.application?.guardianPhone ?? "",
         }}
       />
+
+      <div className="mt-8">
+        <DeleteAccountSection deletionRequested={!!user.deletionRequestedAt} />
+      </div>
     </div>
   );
 }
