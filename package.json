@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts",
+    "reminders:run": "tsx scripts/send-task-reminders.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

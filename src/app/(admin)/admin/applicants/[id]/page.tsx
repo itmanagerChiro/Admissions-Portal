@@ -15,6 +15,7 @@ import { OfferPanel } from "./OfferPanel";
 import { NotesPanel } from "./NotesPanel";
 import { InterviewReviewPanel } from "./InterviewReviewPanel";
 import { EssayReviewPanel } from "./EssayReviewPanel";
+import { PrerequisitesPanel } from "./PrerequisitesPanel";
 import { FlagEditor } from "./FlagEditor";
 import { DeleteAccountPanel } from "./DeleteAccountPanel";
 import Link from "next/link";
@@ -61,6 +62,7 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
       interviewReview: true,
       essayReview: true,
       chiropracticExperience: { orderBy: { date: "desc" } },
+      prerequisiteCourses: { orderBy: { createdAt: "asc" } },
     },
   });
 
@@ -202,8 +204,9 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
         <div className="col-span-2">
           <NotesPanel
             applicationId={id}
-            notes={app.notes.map((n) => ({ ...n, createdAt: n.createdAt.toISOString() }))}
+            notes={app.notes.map((n) => ({ ...n, createdAt: n.createdAt.toISOString(), updatedAt: n.updatedAt.toISOString() }))}
             canAdd={canEditProfile}
+            currentUserId={session!.user.id}
           />
         </div>
 
@@ -238,7 +241,7 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
               ["Phone", app.phone ?? "—"],
               ["City", app.city ?? "—"],
               ["Submitted", app.submittedAt ? new Date(app.submittedAt).toLocaleDateString("en-NZ") : "—"],
-              ["Guardian", app.guardianName ?? "—"],
+              ["Next of Kin", app.guardianName ?? "—"],
               ["GPA", app.gpaScore?.toString() ?? "—"],
               ["Chiropractor reference", app.chiropracticExperience[0]?.chiropractorName ?? "—"],
               ["Prerequisites met", app.prerequisitesMet ? "Yes" : "No"],
@@ -250,6 +253,69 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
             ))}
           </dl>
         </div>
+
+        {/* Academic Background */}
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="px-5 py-3.5" style={{ borderBottom: "1px solid rgba(0,0,0,0.06)", backgroundColor: "#F8F8F6" }}>
+            <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "#555" }}>Academic Background</p>
+          </div>
+          <dl className="divide-y" style={{ borderColor: "rgba(0,0,0,0.05)" }}>
+            {[
+              ["Current/last school", app.currentSchool ?? "—"],
+              ["NCEA level", app.nceaLevel ?? "—"],
+              ["Completed tertiary study", app.hasCompletedTertiaryStudy ? "Yes" : "No"],
+              ["National Student Number", app.nationalStudentNumber ?? "—"],
+            ].map(([k, v], i, arr) => (
+              <div key={k} className="flex justify-between px-5 py-3 text-sm" style={{ borderBottom: i < arr.length - 1 ? "1px solid rgba(0,0,0,0.05)" : "none" }}>
+                <dt style={{ color: "#666" }}>{k}</dt>
+                <dd className="font-medium" style={{ color: "#222" }}>{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+
+        {/* Disclosures */}
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden col-span-2">
+          <div className="px-5 py-3.5" style={{ borderBottom: "1px solid rgba(0,0,0,0.06)", backgroundColor: "#F8F8F6" }}>
+            <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "#555" }}>Disclosures</p>
+          </div>
+          <dl className="divide-y" style={{ borderColor: "rgba(0,0,0,0.05)" }}>
+            {[
+              ["Disability support need", app.hasDisabilitySupportNeed ? (app.disabilitySupportCategory ?? "Yes") : "No"],
+              ["Criminal conviction", app.hasCriminalConviction ? (app.criminalConvictionDetails ?? "Yes") : "No"],
+              ["Pending legal proceedings", app.hasPendingLegalProceedings ? (app.pendingLegalProceedingsDetails ?? "Yes") : "No"],
+              ["Prior academic issues", app.hasPriorAcademicIssues ? (app.priorAcademicIssuesDetails ?? "Yes") : "No"],
+              ["Prior complaints", app.hasPriorComplaints ? (app.priorComplaintsDetails ?? "Yes") : "No"],
+              ["Dishonesty allegations", app.hasDishonestyAllegations ? (app.dishonestyAllegationsDetails ?? "Yes") : "No"],
+            ].map(([k, v], i, arr) => (
+              <div key={k} className="flex justify-between gap-4 px-5 py-3 text-sm" style={{ borderBottom: i < arr.length - 1 ? "1px solid rgba(0,0,0,0.05)" : "none" }}>
+                <dt style={{ color: "#666" }}>{k}</dt>
+                <dd className="font-medium text-right" style={{ color: "#222" }}>{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+
+        {/* Prerequisite Courses (Year 2) */}
+        {app.yearLevel === "YEAR_2" && (
+          <PrerequisitesPanel
+            applicationId={id}
+            courses={app.prerequisiteCourses}
+            gpaScore={app.gpaScore}
+            prerequisitesMet={app.prerequisitesMet}
+            canEdit={canEditProfile}
+          />
+        )}
+
+        {/* Personal Statement */}
+        {app.personalStatement && (
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden col-span-2">
+            <div className="px-5 py-3.5" style={{ borderBottom: "1px solid rgba(0,0,0,0.06)", backgroundColor: "#F8F8F6" }}>
+              <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "#555" }}>Personal Statement</p>
+            </div>
+            <p className="px-5 py-4 text-sm whitespace-pre-wrap" style={{ color: "#333" }}>{app.personalStatement}</p>
+          </div>
+        )}
 
         {/* Tasks */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">

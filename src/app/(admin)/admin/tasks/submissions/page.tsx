@@ -76,7 +76,7 @@ function SubmissionRow({ task, isLast }: { task: any; isLast: boolean }) {
           {!task.acknowledgedAt && <Badge variant="gold">New</Badge>}
         </div>
         <Link href={`/admin/applicants/${task.application.id}/tasks`} className="text-xs font-medium mt-0.5 block" style={{ color: "#114E3B" }}>
-          {task.application.student.firstName} {task.application.student.lastName} · {task.application.applicantNumber}
+          {task.application.student.firstName} {task.application.student.lastName}
         </Link>
         <p className="text-xs mt-0.5" style={{ color: "#bbb" }}>
           Submitted {new Date(task.completedAt).toLocaleDateString("en-NZ", { day: "numeric", month: "short" })}

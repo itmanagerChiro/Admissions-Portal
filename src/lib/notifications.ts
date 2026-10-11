@@ -23,9 +23,10 @@ function renderTaskListHtml(tasks: { title: string }[]): string {
 
 export async function notifyStudentOfNewTasks(
   applicationId: string,
-  tasks: { id: string; title: string }[]
+  tasks: { id: string; title: string; audience?: string }[]
 ): Promise<void> {
-  if (tasks.length === 0) return;
+  const studentTasks = tasks.filter((t) => t.audience === undefined || t.audience === "STUDENT");
+  if (studentTasks.length === 0) return;
   try {
     if (!(await isEmailNotificationsEnabled())) return;
 
@@ -37,7 +38,7 @@ export async function notifyStudentOfNewTasks(
 
     await sendTemplatedEmail("TASKS_ASSIGNED", application.student.email, {
       firstName: application.student.firstName,
-      taskList: renderTaskListHtml(tasks),
+      taskList: renderTaskListHtml(studentTasks),
       portalUrl: buildAppUrl("/tasks"),
     });
   } catch (err) {
@@ -99,6 +100,33 @@ export async function notifyStudentTaskReminder(
     console.error("notifyStudentTaskReminder failed", err);
     return { sent: false, taskCount: tasks.length };
   }
+}
+
+/**
+ * Finds distinct application IDs that have at least one outstanding, required,
+ * student-facing task due exactly `days` from now (by calendar date). Used to
+ * drive an automatic "due soon" reminder, separate from the manual reminder
+ * button (which sends immediately, listing all outstanding tasks).
+ */
+export async function findApplicationIdsWithTasksDueInDays(days: number): Promise<string[]> {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() + days);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+
+  const tasks = await prisma.task.findMany({
+    where: {
+      audience: "STUDENT",
+      isRequired: true,
+      status: { notIn: ["APPROVED"] },
+      dueDate: { gte: start, lt: end },
+    },
+    select: { applicationId: true },
+    distinct: ["applicationId"],
+  });
+
+  return tasks.map((t) => t.applicationId);
 }
 
 function formatOfferType(type: OfferType): string {

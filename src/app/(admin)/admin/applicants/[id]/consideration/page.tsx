@@ -22,6 +22,7 @@ export default async function ConsiderationSummaryPage({ params }: { params: Pro
       essayReview: { include: { reviewedBy: { select: { firstName: true, lastName: true } } } },
       internationalCompliance: true,
       committeeDecision: { include: { decidedBy: { select: { firstName: true, lastName: true } } } },
+      prerequisiteCourses: { orderBy: { createdAt: "asc" } },
     },
   });
 
@@ -71,6 +72,32 @@ export default async function ConsiderationSummaryPage({ params }: { params: Pro
           {row("Prerequisites met", <Badge variant={app.prerequisitesMet ? "green" : "red"}>{app.prerequisitesMet ? "Yes" : "No"}</Badge>)}
           {app.prerequisiteNotes && row("Notes", app.prerequisiteNotes)}
         </dl>
+        {app.prerequisiteCourses.length > 0 && (
+          <div className="px-5 py-3" style={{ borderTop: "1px solid rgba(0,0,0,0.05)" }}>
+            <table className="w-full text-xs">
+              <thead>
+                <tr style={{ color: "#999" }}>
+                  <th className="text-left font-semibold pb-1.5 pr-2">NZCC Course</th>
+                  <th className="text-left font-semibold pb-1.5 pr-2">Equivalent</th>
+                  <th className="text-left font-semibold pb-1.5 pr-2">Grade</th>
+                  <th className="text-left font-semibold pb-1.5 pr-2">Institution</th>
+                  <th className="text-left font-semibold pb-1.5">Year</th>
+                </tr>
+              </thead>
+              <tbody>
+                {app.prerequisiteCourses.map((c) => (
+                  <tr key={c.id}>
+                    <td className="pr-2 pb-1" style={{ color: "#222" }}>{c.nzccCourseCode}</td>
+                    <td className="pr-2 pb-1" style={{ color: "#222" }}>{c.equivalentCourseCode ?? "—"}</td>
+                    <td className="pr-2 pb-1" style={{ color: "#222" }}>{c.grade ?? "—"}</td>
+                    <td className="pr-2 pb-1" style={{ color: "#222" }}>{c.institution ?? "—"}</td>
+                    <td className="pb-1" style={{ color: "#222" }}>{c.year ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Interview */}
@@ -82,7 +109,7 @@ export default async function ConsiderationSummaryPage({ params }: { params: Pro
           <p className="px-5 py-4 text-xs" style={{ color: "#888" }}>No interview review recorded.</p>
         ) : (
           <dl>
-            {row("Score", app.interviewReview.score != null ? `${app.interviewReview.score} / 10` : "—")}
+            {row("Score", app.interviewReview.score != null ? `${app.interviewReview.score} / 30` : "—")}
             {row("Format", app.interviewReview.format ?? "—")}
             {row("Date", app.interviewReview.interviewDate ? new Date(app.interviewReview.interviewDate).toLocaleDateString("en-NZ") : "—")}
             {app.interviewReview.notes && row("Notes", app.interviewReview.notes)}
@@ -100,7 +127,7 @@ export default async function ConsiderationSummaryPage({ params }: { params: Pro
           <p className="px-5 py-4 text-xs" style={{ color: "#888" }}>No essay review recorded.</p>
         ) : (
           <dl>
-            {row("Score", app.essayReview.score != null ? `${app.essayReview.score} / 10` : "—")}
+            {row("Score", app.essayReview.score != null ? `${app.essayReview.score} / 100` : "—")}
             {app.essayReview.notes && row("Notes", app.essayReview.notes)}
             {app.essayReview.reviewedBy && row("Reviewed by", `${app.essayReview.reviewedBy.firstName} ${app.essayReview.reviewedBy.lastName}`)}
           </dl>

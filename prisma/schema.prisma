@@ -465,6 +465,7 @@ model Application {
   interviewReview         InterviewReview?
   essayReview             EssayReview?
   committeeDecision       CommitteeDecision?
+  prerequisiteCourses     PrerequisiteCourse[]
 
   @@index([intakeYearId])
   @@index([currentStage])
@@ -503,6 +504,24 @@ model ChiropracticExperienceEntry {
   chiropractorName String
   status           ChiropracticExperienceStatus
   createdAt        DateTime                     @default(now())
+
+  @@index([applicationId])
+}
+
+// ─────────────────────────────────────────────
+// PREREQUISITE COURSES (Year 2 applicants)
+// ─────────────────────────────────────────────
+
+model PrerequisiteCourse {
+  id                    String      @id @default(cuid())
+  applicationId         String
+  application           Application @relation(fields: [applicationId], references: [id])
+  nzccCourseCode        String
+  equivalentCourseCode  String?
+  grade                 String?
+  institution           String?
+  year                  Int?
+  createdAt             DateTime    @default(now())
 
   @@index([applicationId])
 }
@@ -783,6 +802,7 @@ model Note {
   authorId      String
   author        User        @relation("NoteAuthor", fields: [authorId], references: [id])
   createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   @@index([applicationId])
 }

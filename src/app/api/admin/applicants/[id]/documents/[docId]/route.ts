@@ -24,14 +24,29 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const newStatus = action === "verify" ? "VERIFIED" : "REJECTED";
 
-  await prisma.document.update({
-    where: { id: docId },
-    data: {
-      status: newStatus,
-      verificationNote,
-      verifiedById: action === "verify" ? session!.user.id : null,
-    },
-  });
+  await prisma.$transaction([
+    prisma.document.update({
+      where: { id: docId },
+      data: {
+        status: newStatus,
+        verificationNote,
+        verifiedById: action === "verify" ? session!.user.id : null,
+      },
+    }),
+    ...(doc.taskId
+      ? [
+          prisma.task.update({
+            where: { id: doc.taskId },
+            data: {
+              status: action === "verify" ? "APPROVED" : "REJECTED",
+              reviewNote: verificationNote,
+              reviewedAt: new Date(),
+              reviewedById: session!.user.id,
+            },
+          }),
+        ]
+      : []),
+  ]);
 
   await logAudit({
     applicationId: id,

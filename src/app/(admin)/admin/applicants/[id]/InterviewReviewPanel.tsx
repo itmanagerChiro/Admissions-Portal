@@ -45,9 +45,9 @@ export function InterviewReviewPanel({ applicationId, review, canEdit }: { appli
       <div className="px-5 py-4 flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-semibold text-text mb-1 block">Score (1-10)</label>
+            <label className="text-xs font-semibold text-text mb-1 block">Score (out of 30)</label>
             <input
-              type="number" min={1} max={10} value={score} onChange={(e) => setScore(e.target.value)} disabled={!canEdit}
+              type="number" min={1} max={30} value={score} onChange={(e) => setScore(e.target.value)} disabled={!canEdit}
               className="w-full px-3 py-2 text-sm rounded-lg" style={{ backgroundColor: "#F8F8F6", border: "1.5px solid rgba(0,0,0,0.1)" }}
             />
           </div>

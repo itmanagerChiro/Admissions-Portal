@@ -81,7 +81,7 @@ function wrapInBrandedLayout(bodyHtml: string): string {
                 <p style="margin:0 0 6px 0; font-size:13px; font-weight:600; color:#054B37;">New Zealand College of Chiropractic</p>
                 <p style="margin:0; font-size:12px; color:#888888; line-height:1.5;">
                   Te Kāreti Kaikorohiti o Aotearoa<br />
-                  This is an automated message from the NZCC Admissions Portal. Please do not reply directly to this email.
+                  This is an automated message from the NZCC Applicant Portal. Please do not reply directly to this email.
                 </p>
               </td>
             </tr>
@@ -105,9 +105,9 @@ export const DEFAULT_EMAIL_TEMPLATES: Record<
   ACCOUNT_VERIFICATION: {
     name: "Account Verification",
     description: "Sent when a student registers, to confirm their email address.",
-    subject: "Verify your NZCC Admissions account",
+    subject: "Verify your New Zealand College of Chiropractic account",
     bodyHtml: `<p>Kia ora {{firstName}},</p>
-<p>Welcome to the NZCC Admissions Portal. Please confirm your email address to activate your account:</p>
+<p>Welcome to the New Zealand College of Chiropractic (NZCC) Applicant Portal. Please confirm your email address to activate your account:</p>
 ${ctaButton("{{verifyUrl}}", "Verify my email")}
 <p style="color:#888888; font-size:13px;">This link expires in 24 hours. If you didn't create this account, you can ignore this email.</p>`,
   },
@@ -135,7 +135,7 @@ ${ctaButton("{{verifyUrl}}", "Verify my email")}`,
     description: "Sent to a student when their application moves to a new stage.",
     subject: "Your application status has been updated",
     bodyHtml: `<p>Kia ora {{firstName}},</p>
-<p>Your application has moved to the <strong style="color:#00733F;">{{stageName}}</strong> stage.</p>
+<p>Your application has been updated. Please log in to your account for details.</p>
 ${ctaButton("{{portalUrl}}", "View your application")}`,
   },
   TASKS_ASSIGNED: {

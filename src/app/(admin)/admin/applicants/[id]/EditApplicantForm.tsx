@@ -121,7 +121,7 @@ export function EditApplicantForm({ applicationId, initial }: EditApplicantFormP
           </div>
 
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest mb-3" style={{ color: "#999" }}>Guardian / Emergency Contact</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest mb-3" style={{ color: "#999" }}>Next of Kin</p>
             <div className="flex flex-col gap-3">
               <Input label="Name" value={form.guardianName} onChange={(e) => set("guardianName", e.target.value)} />
               <Input label="Email" type="email" value={form.guardianEmail} onChange={(e) => set("guardianEmail", e.target.value)} />

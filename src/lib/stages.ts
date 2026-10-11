@@ -6,7 +6,7 @@ export const STAGE_LABELS: Record<ApplicationStageKey, string> = {
   ACADEMIC_CHECK: "Academic Check",
   INTERVIEW: "Interview",
   ESSAY: "Essay",
-  COMMITTEE: "Committee",
+  COMMITTEE: "Admissions Panel Review",
   OFFER_CONDITIONAL: "Offer - Conditional",
   OFFER_UNCONDITIONAL: "Offer - Unconditional",
   ACCEPTED: "Enrolment Accepted",

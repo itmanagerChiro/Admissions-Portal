@@ -72,8 +72,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     createdById: session!.user.id,
   });
 
-  await notifyStudentOfNewTasks(id, newTasks);
-  if (notifyStudent) await notifyStudentOfStageChange(id, nextStage);
+  if (notifyStudent) {
+    await notifyStudentOfNewTasks(id, newTasks);
+    await notifyStudentOfStageChange(id, nextStage);
+  }
 
   await logAudit({
     applicationId: id,

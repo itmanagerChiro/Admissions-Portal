@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissionGuard } from "@/lib/permissions";
 import { createTimelineEvent } from "@/lib/timeline";
-import { notifyAdminsOfAllTasksComplete } from "@/lib/notifications";
+import { notifyAdminsOfAllTasksComplete, notifyStudentOfDocumentRejection } from "@/lib/notifications";
 import { logAudit } from "@/lib/audit";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -21,18 +21,39 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const reviewNote = body.reviewNote;
     const newStatus = action === "approve" ? "APPROVED" : "REJECTED";
+    const linkedDocuments = await prisma.document.findMany({ where: { taskId } });
 
-    await prisma.task.update({
-      where: { id: taskId },
-      data: {
-        status: newStatus,
-        reviewNote,
-        reviewedAt: new Date(),
-        reviewedById: session!.user.id,
-        acknowledgedAt: task.acknowledgedAt ?? new Date(),
-        acknowledgedById: task.acknowledgedById ?? session!.user.id,
-      },
-    });
+    await prisma.$transaction([
+      prisma.task.update({
+        where: { id: taskId },
+        data: {
+          status: newStatus,
+          reviewNote,
+          reviewedAt: new Date(),
+          reviewedById: session!.user.id,
+          acknowledgedAt: task.acknowledgedAt ?? new Date(),
+          acknowledgedById: task.acknowledgedById ?? session!.user.id,
+        },
+      }),
+      ...(linkedDocuments.length > 0
+        ? [
+            prisma.document.updateMany({
+              where: { taskId },
+              data: {
+                status: action === "approve" ? "VERIFIED" : "REJECTED",
+                verificationNote: reviewNote,
+                verifiedById: action === "approve" ? session!.user.id : null,
+              },
+            }),
+          ]
+        : []),
+    ]);
+
+    if (action === "reject") {
+      for (const doc of linkedDocuments) {
+        await notifyStudentOfDocumentRejection(id, doc.filename, reviewNote ?? null);
+      }
+    }
 
     await createTimelineEvent({
       applicationId: id,

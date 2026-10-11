@@ -46,6 +46,7 @@ export function OfferPanel({ applicationId, offers, canManage, depositStatus, de
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [type, setType] = useState<"CONDITIONAL" | "UNCONDITIONAL">("CONDITIONAL");
   const [deadline, setDeadline] = useState("");
+  const [notifyStudent, setNotifyStudent] = useState(true);
   const [selectedStandard, setSelectedStandard] = useState<Set<string>>(new Set());
   const [customConditions, setCustomConditions] = useState<string[]>([""]);
   const [isLoading, setIsLoading] = useState(false);
@@ -95,6 +96,7 @@ export function OfferPanel({ applicationId, offers, canManage, depositStatus, de
         type,
         acceptanceDeadline: deadline || null,
         conditions,
+        notifyStudent,
       }),
     });
     setIsLoading(false);
@@ -281,6 +283,11 @@ export function OfferPanel({ applicationId, offers, canManage, depositStatus, de
           )}
 
           {error && <p className="text-sm text-red-flag">{error}</p>}
+
+          <label className="flex items-center gap-2 text-sm" style={{ color: "#333" }}>
+            <input type="checkbox" checked={notifyStudent} onChange={(e) => setNotifyStudent(e.target.checked)} />
+            Send student email notification
+          </label>
 
           <div className="flex gap-3 justify-end">
             <Button variant="ghost" onClick={() => setIsCreateOpen(false)}>Cancel</Button>

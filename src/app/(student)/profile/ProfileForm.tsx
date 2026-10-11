@@ -68,9 +68,9 @@ export function ProfileForm({ userId, initialData }: ProfileFormProps) {
         </div>
       </section>
 
-      {/* Guardian */}
+      {/* Next of Kin */}
       <section className="bg-white p-6">
-        <h2 className="font-serif text-base text-text mb-5">Emergency Contact / Guardian</h2>
+        <h2 className="font-serif text-base text-text mb-5">Next of Kin</h2>
         <div className="grid grid-cols-2 gap-4">
           <Input label="Full name" value={form.guardianName} onChange={(e) => set("guardianName", e.target.value)} className="col-span-2" />
           <Input label="Email" type="email" value={form.guardianEmail} onChange={(e) => set("guardianEmail", e.target.value)} />

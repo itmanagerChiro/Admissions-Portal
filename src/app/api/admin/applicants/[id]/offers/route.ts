@@ -32,6 +32,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const acceptanceDeadline: string | null = body.acceptanceDeadline ?? null;
   const offerLetterReference: string | null = body.offerLetterReference ?? null;
   const notes: string | null = body.notes ?? null;
+  const notifyStudent: boolean = body.notifyStudent ?? true;
   const conditions: { conditionText: string; isStandard?: boolean }[] = Array.isArray(body.conditions)
     ? body.conditions
     : [];
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     createdById: session!.user.id,
   });
 
-  await notifyStudentOfOffer(id, offer.type, offer.acceptanceDeadline);
+  if (notifyStudent) await notifyStudentOfOffer(id, offer.type, offer.acceptanceDeadline);
 
   await logAudit({
     applicationId: id,

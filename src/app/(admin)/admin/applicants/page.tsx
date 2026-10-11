@@ -102,9 +102,18 @@ export default async function AllApplicantsPage({
           </p>
         </div>
         <div className="flex gap-2">
-          <button className="px-4 py-2 rounded-lg bg-white shadow-sm text-sm font-medium text-text-muted hover:text-green transition-colors">
+          <a
+            href={`/api/admin/applicants/export?${new URLSearchParams({
+              ...(params.search ? { search: params.search } : {}),
+              ...(params.stage ? { stage: params.stage } : {}),
+              ...(params.type ? { type: params.type } : {}),
+              ...(params.year ? { year: params.year } : {}),
+              ...(params.intake ? { intake: params.intake } : {}),
+            }).toString()}`}
+            className="px-4 py-2 rounded-lg bg-white shadow-sm text-sm font-medium text-text-muted hover:text-green transition-colors"
+          >
             Export
-          </button>
+          </a>
           <NotImplementedButton className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
             + New
           </NotImplementedButton>

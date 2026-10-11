@@ -452,8 +452,8 @@ export function ApplyWizard({ openIntakeYears }: { openIntakeYears: IntakeYearOp
         </div>
         <h2 className="font-serif text-2xl text-text mb-4">Your Application Has Been Submitted</h2>
         <p className="text-sm text-text-muted max-w-lg leading-relaxed">
-          Thank you for applying to the New Zealand College of Chiropractic. Your application will be processed
-          within the next 2–3 business days.
+          Thank you for applying to the New Zealand College of Chiropractic. One of our team will be in touch
+          with you soon to discuss your application.
         </p>
         <p className="text-sm text-text-muted max-w-lg leading-relaxed mt-4">
           You can track the progress of your application at any time through the applicant portal, using the
@@ -875,7 +875,7 @@ export function ApplyWizard({ openIntakeYears }: { openIntakeYears: IntakeYearOp
               <option value="OTHER">Other</option>
             </Select>
 
-            <p className="text-[11px] font-semibold uppercase tracking-widest mt-2" style={{ color: "#999" }}>Emergency Contact / Guardian (optional)</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest mt-2" style={{ color: "#999" }}>Next of Kin (optional)</p>
             <Input label="Full name" value={form.guardianName} onChange={(e) => set("guardianName", e.target.value)} />
             <div className="grid grid-cols-2 gap-3">
               <Input label="Email" type="email" value={form.guardianEmail} onChange={(e) => set("guardianEmail", e.target.value)} />
