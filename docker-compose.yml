@@ -1,15 +1,44 @@
+# Production stack (deployed via Dokploy). Values come from the Dokploy
+# Environment tab, which Dokploy writes to a .env file next to this compose file.
+# For local development, use docker-compose.dev.yml (Postgres only).
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nzcc}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-nzcc_portal}
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required}
+      AUTH_URL: ${AUTH_URL:?AUTH_URL is required}
+      AUTH_TRUST_HOST: "true"
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
+      STORAGE_PROVIDER: local
+    volumes:
+      - uploads:/app/uploads
+    expose:
+      - "3000"
+
   db:
     image: postgres:16
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: nzcc_portal
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-nzcc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-nzcc_portal}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nzcc} -d ${POSTGRES_DB:-nzcc_portal}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   postgres_data:
+  uploads:
